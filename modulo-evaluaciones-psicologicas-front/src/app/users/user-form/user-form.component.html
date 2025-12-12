@@ -1,0 +1,39 @@
+<app-nav></app-nav>
+<div class="clinic-container my-8">
+  <div class="bg-white rounded-lg shadow p-6 max-w-xl mx-auto">
+    <app-users-tabs></app-users-tabs>
+    <h3 class="text-lg font-semibold mb-4">{{ isEdit() ? 'Editar usuario' : 'Crear usuario' }}</h3>
+    <form (ngSubmit)="submit()" [formGroup]="form" class="grid grid-cols-1 md:grid-cols-2 gap-4">
+      <div class="md:col-span-2">
+        <label for="username" class="form-label">Usuario</label>
+        <input id="username" type="text" formControlName="username" class="form-input w-full" autocomplete="off" />
+      </div>
+      <div class="md:col-span-2">
+        <label for="email" class="form-label">Correo</label>
+        <input id="email" type="email" formControlName="email" class="form-input w-full" autocomplete="off" />
+      </div>
+      @if (!isEdit()) {
+        <div class="md:col-span-2">
+          <label for="password" class="form-label">Contraseña</label>
+          <input id="password" type="password" formControlName="password" class="form-input w-full" autocomplete="new-password" />
+        </div>
+      }
+      <div class="md:col-span-2">
+        <label for="roleId" class="form-label">Rol</label>
+        <select id="roleId" formControlName="roleId" class="form-input w-full">
+          <option [ngValue]="null" disabled>Seleccione un rol</option>
+          @for (r of roles(); track r.id) {
+            <option [ngValue]="r.id">{{ r.name }}</option>
+          }
+        </select>
+      </div>
+      <div class="md:col-span-2 flex items-center gap-2">
+        <input id="active" type="checkbox" formControlName="active" class="h-4 w-4" />
+        <label for="active" class="form-label">Cuenta activa</label>
+      </div>
+      <div class="md:col-span-2 flex justify-end mt-2">
+        <button class="btn-primary" [disabled]="loading() || form.invalid" type="submit">{{ loading() ? 'Guardando…' : 'Guardar' }}</button>
+      </div>
+    </form>
+  </div>
+</div>

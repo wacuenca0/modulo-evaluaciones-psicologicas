@@ -1,0 +1,44 @@
+<app-nav></app-nav>
+<div class="clinic-container my-8">
+  <div class="bg-white rounded-lg shadow p-6">
+    <app-users-tabs></app-users-tabs>
+    <div class="flex items-center justify-between mb-4">
+      <h3 class="text-lg font-semibold">Usuarios</h3>
+      <a class="btn-primary" routerLink="/users/new">Nuevo usuario</a>
+    </div>
+
+    @if (loading()) {
+      <div class="text-sm text-gray-500">Cargando...</div>
+    }
+
+    @if (!loading() && users().length === 0) {
+      <div class="text-sm text-gray-500">No hay usuarios registrados.</div>
+    } @else {
+      <table class="min-w-full bg-white shadow rounded overflow-hidden">
+        <thead>
+          <tr class="text-left bg-gray-50">
+            <th class="px-4 py-2">Usuario</th>
+            <th class="px-4 py-2">Correo</th>
+            <th class="px-4 py-2">Rol</th>
+            <th class="px-4 py-2">Estado</th>
+            <th class="px-4 py-2">Acciones</th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (u of users(); track u.username) {
+            <tr class="hover:bg-gray-50">
+              <td class="px-4 py-2">{{ u.username }}</td>
+              <td class="px-4 py-2">{{ u.email || '—' }}</td>
+              <td class="px-4 py-2">{{ u.roleName || ('ID ' + u.roleId) }}</td>
+              <td class="px-4 py-2">{{ u.active ? 'Activo' : 'Inactivo' }}</td>
+              <td class="px-4 py-2">
+                <a class="btn-outline mr-2" [routerLink]="['/users', u.username, 'edit']">Editar</a>
+                <a class="btn-outline mr-2" [routerLink]="['/users', u.username, 'change-password']">Cambiar contraseña</a>
+              </td>
+            </tr>
+          }
+        </tbody>
+      </table>
+    }
+  </div>
+</div>

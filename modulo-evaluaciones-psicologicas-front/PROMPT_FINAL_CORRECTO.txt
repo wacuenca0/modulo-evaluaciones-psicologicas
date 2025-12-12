@@ -1,0 +1,203 @@
+📄 PROMPT FINAL CORRECTO (PÉGALO TAL CUAL)
+Prototipo Angular Quemado conforme a Requisitos Funcionales (Pacientes + Cursos + Entrevistas)
+
+Quiero que generes un prototipo Angular 17+ COMPLETAMENTE QUEMADO (hard-coded), basado en los requisitos funcionales del archivo /mnt/data/requisitos.pdf.
+NO quiero un contenedor genérico ni tarjetas sin funcionalidad.
+El prototipo debe representar fielmente los módulos descritos en los requisitos: pacientes, cursos y entrevistas psicológicas.
+
+1. Arquitectura GENERAL
+
+Generar un sistema con 3 módulos principales:
+
+Módulo 1 — PACIENTES
+
+Debe contener:
+
+Lista de pacientes
+
+Ficha individual
+
+Historial de atención
+
+Entrevistas asociadas
+
+Estado clínico (activo/inactivo)
+
+Datos según requisitos del PDF
+
+CRUD QUEMADO (no conectado a BD)
+
+Ejemplo de datos quemados:
+
+{
+  "id": 1,
+  "nombres": "Carlos",
+  "apellidos": "Ramírez",
+  "cedula": "1102456712",
+  "fechaNacimiento": "1995-02-10",
+  "sexo": "M",
+  "telefono": "0991234567",
+  "direccion": "Quito",
+  "estado": "activo",
+  "motivoConsulta": "Alteraciones emocionales",
+  "derivacion": "Curso militar 2025"
+}
+
+Módulo 2 — CURSOS (Evaluaciones grupales)
+
+Debe incluir:
+
+Lista de cursos activos e inactivos
+
+Participantes
+
+Evaluaciones psicológicas grupales
+
+Informe grupal
+
+Resultados quemados
+
+Relación entre curso → participantes → entrevistas
+
+Ejemplo quemado:
+
+{
+  "id": 10,
+  "nombreCurso": "Curso de Formación Militar 2025",
+  "fechaInicio": "2025-03-01",
+  "fechaFin": "2025-08-20",
+  "instructor": "Cap. López",
+  "cantidadParticipantes": 45,
+  "estado": "en desarrollo"
+}
+
+Módulo 3 — ENTREVISTAS
+
+Este módulo YA lo tengo implementado.
+POR FAVOR:
+
+NO crear entrevistas nuevas
+
+NO generar tarjetas vacías
+
+NO inventar componentes
+
+SOLO crear el contenedor donde se incrustan las entrevistas existentes
+
+El contenedor debe permitir:
+
+✔ montar
+✔ desmontar
+✔ minimizar
+✔ expandir
+✔ agrupar por paciente o curso
+
+El contenedor debe mostrar información REAL extraída del PDF, como:
+
+Tipo de entrevista
+
+Fecha
+
+Profesional
+
+Estado (abierta/cerrada)
+
+Paciente o curso asociado
+
+Ejemplo quemado:
+
+{
+  "id": "E-2025-014",
+  "tipo": "Entrevista Inicial",
+  "fecha": "2025-11-10",
+  "estado": "abierta",
+  "pacienteId": 1,
+  "profesional": "Dra. Alejandra Álava"
+}
+
+2. Lo que debe generar la interfaz
+Dashboard General
+
+Con 3 tarjetas principales:
+
+Total pacientes
+
+Total cursos
+
+Total entrevistas activas
+
+Pacientes
+
+Tabla completa
+
+Botón “Ver ficha” → pantalla con datos reales
+
+Botón “Entrevistas” → lista de entrevistas asociadas
+
+Botón “Abrir entrevista” → incrusta el componente ya existente
+
+Cursos
+
+Lista de cursos
+
+Participantes (extraído del JSON quemado)
+
+Botón “Evaluaciones”
+
+Botón “Abrir entrevista grupal” → usa contenedor
+
+Contenedor de entrevistas
+
+Debe lucir profesional, con:
+
+foto o inicial del paciente
+
+tipo de entrevista
+
+estado
+
+fecha
+
+botón Abrir
+
+botón Minimizar
+
+botón Desmontar
+
+Nada de tarjetas blancas sin contenido.
+
+3. REGLAS IMPORTANTES
+
+TODOS los datos deben ser quemados
+
+El contenedor de entrevistas NO se inventa entrevistas, solo muestra meta-datos reales
+
+Usar Tailwind moderno (colores institucionales exactos)
+
+Respetar absolutamente los requisitos del PDF
+
+Presentar un prototipo funcional real, no juguetes
+
+NADA debe salir vacío o placeholder
+
+4. Entregables
+
+El generador debe producir:
+
+Componentes Angular
+
+HTML con Tailwind
+
+JSON quemado
+
+Servicios quemados
+
+Rutas
+
+Dashboard
+
+Módulo de pacientes
+
+Módulo de cursos
+
+Contenedor de entrevistas
