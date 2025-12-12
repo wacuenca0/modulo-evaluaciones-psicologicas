@@ -1,0 +1,63 @@
+Proyecto: Sistema de Evaluaciones Psicológicas Militares
+Fecha: 10/12/2025
+
+Resumen general
+----------------
+El proyecto está dividido en varios servicios (microservicios) que colaboran para gestionar usuarios, catálogos clínicos y formularios completos de valoración psicológica. Todo el acceso está protegido: primero hay que iniciar sesión para obtener un token y después ese token se usa en cada solicitud. Los roles más importantes son Administrador, Psicólogo y Observador.
+
+Principales bloques funcionales
+--------------------------------
+1. Acceso y seguridad (servicio-catalogos)
+   - Iniciar sesión y obtener un token de seguridad.
+   - Consultar quién es el usuario conectado y qué rol tiene.
+
+2. Gestión de usuarios y roles (servicio-catalogos)
+   - Ver la lista completa de usuarios registrados.
+   - Crear usuarios nuevos asignándoles un rol (por ejemplo, Administrador o Psicólogo).
+   - Editar datos básicos de un usuario (correo, rol, estado activo).
+   - Desactivar o eliminar usuarios cuando sea necesario.
+   - Ver el catálogo de roles disponibles para asignarlos en los formularios.
+
+3. Catálogo clínico CIE10 (servicio-catalogos)
+   - Buscar y listar los diagnósticos CIE10 almacenados.
+   - Revisar los detalles de un diagnóstico específico.
+   - Crear nuevos diagnósticos o actualizar los existentes (solo administradores).
+
+4. Tipos de documentos (servicio-documentos)
+   - Listar todos los tipos de documentos que se pueden adjuntar a una ficha (ej. PDF, informe médico, etc.).
+   - Consultar el detalle de un tipo concreto.
+   - Crear, actualizar o eliminar tipos de documentos (tarea de administradores).
+
+5. Fichas históricas psicológicas (servicio-documentos)
+   - Buscar fichas por número de cédula de la persona evaluada.
+   - Abrir la ficha completa para revisarla: datos personales, antecedentes médicos, historia psicológica, evaluación, recomendaciones y estado actual.
+   - Crear una ficha nueva a partir de un formulario extenso dividido en secciones.
+   - Guardar cambios en fichas existentes (por ejemplo, pasar de borrador a finalizada).
+   - Eliminar fichas cuando sea necesario (acción restringida a administradores).
+
+6. Documentos adjuntos por ficha (servicio-documentos)
+   - Ver todas las evidencias adjuntas a una ficha (nombre, tipo, fecha de subida, etc.).
+   - Consultar los datos de un documento específico.
+   - Subir nuevos documentos, indicando a qué ficha pertenecen y qué tipo son.
+   - Actualizar la información de un documento (por ejemplo, marcarlo como inactivo si ya no aplica).
+   - Dar de baja lógica a un documento sin borrarlo físicamente.
+
+7. Funcionalidades en espera (servicio-gestion)
+   - El módulo destinado a gestionar personal militar y psicólogos aún no tiene endpoints activos. Más adelante se publicará una API que permitirá alimentar los catálogos de personal directamente desde este sistema.
+
+Cómo se espera que sea el frontend
+----------------------------------
+- Pantalla de inicio de sesión que guarde el token de seguridad cuando el acceso es válido.
+- Panel general con las principales secciones visibles según el rol del usuario (Administración, Psicólogos, Observadores).
+- Gestión de usuarios y roles: tablas con acciones de crear, editar y eliminar.
+- Catálogo CIE10: buscador por código y descripción, con filtros de “solo activos”.
+- Tipos de documento: lista simple con opciones de mantenimiento (alta/baja/modificación).
+- Fichas psicológicas: formulario tipo “wizard” dividido en pestañas o pasos para facilitar el llenado completo de la evaluación.
+- Documentos de la ficha: listado con opciones de subir archivo, ver detalle y marcarlo como inactivo.
+
+Notas adicionales
+-----------------
+- Casi todas las acciones requieren que el usuario sea al menos Psicólogo; la gestión de catálogos y usuarios está reservada a Administradores.
+- Las fechas se manejan con el formato estándar ISO (ejemplo: 2025-12-10).
+- Los campos largos (observaciones, antecedentes, evaluaciones) pueden contener textos amplios; conviene ofrecer cajas de texto grandes o editores ricos.
+- Antes de enviar formularios, es recomendable validar que los datos obligatorios estén completos para evitar errores desde el backend.

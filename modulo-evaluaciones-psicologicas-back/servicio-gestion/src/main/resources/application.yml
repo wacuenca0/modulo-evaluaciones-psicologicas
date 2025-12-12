@@ -1,0 +1,18 @@
+server:
+  address: 127.0.0.1
+  port: 8082
+
+spring:
+  application:
+    name: servicio-gestion
+  datasource:
+    url: jdbc:oracle:thin:@localhost:1521/xepdb1
+    username: ${DB_USERNAME:user_hc}
+    password: ${DB_PASSWORD:secure_password_2025}
+    driver-class-name: oracle.jdbc.OracleDriver
+  jpa:
+    hibernate:
+      ddl-auto: none
+    properties:
+      hibernate:
+        dialect: org.hibernate.dialect.Oracle12cDialect

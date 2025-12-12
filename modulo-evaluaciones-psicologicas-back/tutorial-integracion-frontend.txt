@@ -1,0 +1,282 @@
+============================================================
+TUTORIAL DE INTEGRACION FRONTEND - MODULO EVALUACIONES BACKEND
+============================================================
+
+Indice
+------
+1. Requisitos previos
+2. Arquitectura y puertos
+3. Seguridad y autenticacion JWT
+4. Flujo de inicio de sesion (login)
+5. Consumo de endpoints via API Gateway
+6. Especificaciones de JSON por microservicio
+   6.1 Servicio Catalogos
+   6.2 Servicio Gestion
+   6.3 Servicio Documentos
+7. Manejo de errores y codigos HTTP
+8. Configuracion de variables de entorno en el Frontend
+9. Buenas practicas para pruebas y despliegue
+
+1. Requisitos previos
+---------------------
+- Node.js >= 18 en el entorno frontend.
+- Herramienta HTTP (Fetch, Axios) con soporte para promesas.
+- Capacidad para almacenar tokens de acceso (localStorage o memory store seguro).
+- Conocimiento basico de CORS y cabeceras HTTP.
+
+2. Arquitectura y puertos
+-------------------------
+- Todos los clientes deben consumir un unico punto de entrada: http://localhost:8080
+  (API Gateway).
+- El gateway enruta internamente a:
+  * servicio-catalogos -> http://127.0.0.1:8081
+  * servicio-gestion   -> http://127.0.0.1:8082
+  * servicio-documentos-> http://127.0.0.1:8083
+- No se expone ningun microservicio directamente al frontend; cualquier solicitud debe
+  pasar por el gateway.
+
+3. Seguridad y autenticacion JWT
+--------------------------------
+- El backend utiliza JWT portador en la cabecera Authorization.
+  Formato: Authorization: Bearer <token>
+- Los tokens tienen los claims: issuer, audience y roles (authorities). El frontend
+  debe leer los roles para habilitar funcionalidades.
+- Se debe manejar expiracion del token y refrescarlo volviendo a iniciar sesion.
+- El JWT secreto por defecto es una variable configurada en backend. Para ambientes
+  reales debe reemplazarse y compartir el valor con el equipo frontend si se manejan
+  pruebas integradas.
+
+4. Flujo de inicio de sesion (login)
+------------------------------------
+1. Enviar POST a http://localhost:8080/catalogos/auth/login
+   Cabeceras obligatorias:
+   - Content-Type: application/json
+2. Cuerpo JSON ejemplo:
+   {
+     "username": "admin",
+     "password": "supersegura"
+   }
+3. Respuesta exitosa (200):
+   {
+     "token": "<JWT>",
+     "roles": ["ADMINISTRADOR", "CATALOGOS_CIE10"],
+     "expiresAt": "2025-12-31T23:59:59Z"
+   }
+4. Guardar el token para posteriores llamadas.
+5. Si el login falla retorna 401 con cuerpo:
+   {
+     "message": "Credenciales invalidas"
+   }
+
+5. Consumo de endpoints via API Gateway
+---------------------------------------
+- Base URL para todas las llamadas: http://localhost:8080
+- Reglas de ruteo:
+  * /catalogos/** -> servicio-catalogos
+  * /gestion/**   -> servicio-gestion
+  * /documentos/**-> servicio-documentos
+- Siempre incluir cabecera Authorization con el JWT salvo endpoints publicos (ej. login).
+- Cabecera Content-Type: application/json cuando se envian cuerpos JSON.
+- Ejemplo Axios:
+  axios.get("http://localhost:8080/catalogos/cie10", {
+    headers: {
+      Authorization: `Bearer ${token}`
+    }
+  });
+
+6. Especificaciones de JSON por microservicio
+----------------------------------------------
+
+6.1 Servicio Catalogos (ruta /catalogos)
+----------------------------------------
+A. Autenticacion
+   POST /catalogos/auth/login
+   - Body: {"username", "password"}
+   - Respuesta: ver seccion 4.
+
+B. Usuarios
+   GET /catalogos/usuarios
+   Respuesta:
+   [
+     {
+       "id": "UUID",
+       "username": "string",
+       "nombreCompleto": "string",
+       "roles": ["ADMINISTRADOR", "PSICOLOGO"],
+       "estado": "ACTIVO"
+     }
+   ]
+
+   POST /catalogos/usuarios
+   Body ejemplo:
+   {
+     "username": "nuevo.usuario",
+     "password": "clave",
+     "nombreCompleto": "Nombre Apellido",
+     "roles": ["PSICOLOGO"],
+     "estado": "ACTIVO"
+   }
+   Respuesta 201:
+   {
+     "id": "UUID-generado",
+     ...campos enviados...
+   }
+
+C. Roles
+   GET /catalogos/roles -> lista de roles disponibles (strings).
+
+D. Catalogo CIE10
+   GET /catalogos/cie10?search=ansiedad
+   Respuesta:
+   [
+     {
+       "codigo": "F41.1",
+       "descripcion": "Trastorno de ansiedad generalizada",
+       "categoria": "Trastornos de ansiedad"
+     }
+   ]
+
+6.2 Servicio Gestion (ruta /gestion)
+------------------------------------
+A. Fichas Psicologicas
+   GET /gestion/fichas?identificacion=1712345678
+   Respuesta:
+   [
+     {
+       "id": 123,
+       "identificacion": "1712345678",
+       "fechaEvaluacion": "2025-11-01",
+       "psicologoAsignado": "UUID",
+       "estado": "EN_PROCESO"
+     }
+   ]
+
+   POST /gestion/fichas
+   Body:
+   {
+     "identificacion": "1712345678",
+     "fechaEvaluacion": "2025-12-12",
+     "resumen": "Observaciones generales",
+     "diagnosticos": ["F41.1"],
+     "recomendaciones": "Programar seguimiento"
+   }
+   Respuesta 201: ficha completa con id generado.
+
+B. Asignacion de Psicologos
+   POST /gestion/asignaciones
+   Body:
+   {
+     "idFicha": 123,
+     "psicologoId": "UUID"
+   }
+   Respuesta 200:
+   {
+     "mensaje": "Asignacion registrada"
+   }
+
+6.3 Servicio Documentos (ruta /documentos)
+------------------------------------------
+A. Tipos de Documento
+   GET /documentos/tipos
+   Respuesta:
+   [
+     {
+       "id": 1,
+       "nombre": "Informe",
+       "descripcion": "Informe completo de evaluacion"
+     }
+   ]
+
+   POST /documentos/tipos
+   Body:
+   {
+     "nombre": "Certificado",
+     "descripcion": "Constancia para el paciente"
+   }
+   Respuesta 201 con objeto creado.
+
+B. Ficha Historica
+   GET /documentos/historicas?identificacion=1712345678
+   Respuesta:
+   [
+     {
+       "id": 456,
+       "identificacion": "1712345678",
+       "fecha": "2025-10-30",
+       "tipo": "Informe",
+       "resumen": "Resumen historico"
+     }
+   ]
+
+   POST /documentos/historicas
+   Body:
+   {
+     "identificacion": "1712345678",
+     "tipoDocumentoId": 1,
+     "fecha": "2025-12-12",
+     "contenido": "Texto plano o JSON con datos relevantes"
+   }
+
+C. Documentos de Ficha
+   GET /documentos/fichas/123
+   Respuesta:
+   [
+     {
+       "id": 789,
+       "fichaId": 123,
+       "nombreArchivo": "informe.pdf",
+       "tipoContenido": "application/pdf",
+       "urlDescarga": "http://localhost:8080/documentos/fichas/123/archivo/789"
+     }
+   ]
+
+   POST /documentos/fichas
+   Body multipart o JSON segun version disponible.
+   * Para simplificar integracion inicial se expone un endpoint JSON:
+     {
+       "fichaId": 123,
+       "nombreArchivo": "informe.pdf",
+       "contenidoBase64": "JVBERi0xLjQKJ...",
+       "tipoContenido": "application/pdf"
+     }
+   Respuesta 201:
+   {
+     "mensaje": "Documento almacenado",
+     "id": 789
+   }
+
+7. Manejo de errores y codigos HTTP
+------------------------------------
+- 200 OK: Lectura o actualizacion exitosa.
+- 201 Created: Recursos creados (POST).
+- 204 No Content: Eliminaciones exitosas (cuando aplique).
+- 400 Bad Request: Validaciones fallidas; el cuerpo incluye {"message": "detalle"}.
+- 401 Unauthorized: Token faltante o invalido.
+- 403 Forbidden: Usuario sin rol requerido.
+- 404 Not Found: Recurso inexistente.
+- 409 Conflict: Conflictos de negocio (ej. duplicados).
+
+8. Configuracion de variables de entorno en el Frontend
+--------------------------------------------------------
+Definir en .env (React/Vite/Angular equivalent):
+REACT_APP_API_BASE_URL=http://localhost:8080
+REACT_APP_CATALOGOS_BASE=/catalogos
+REACT_APP_GESTION_BASE=/gestion
+REACT_APP_DOCUMENTOS_BASE=/documentos
+
+Ejemplo de construccion dinamica:
+const baseUrl = process.env.REACT_APP_API_BASE_URL;
+const catalogosUrl = `${baseUrl}${process.env.REACT_APP_CATALOGOS_BASE}`;
+
+9. Buenas practicas para pruebas y despliegue
+----------------------------------------------
+- Ejecutar `./mvnw.cmd test` en backend antes de pruebas integradas.
+- Utilizar Postman o Thunder Client para verificar endpoints previo a consumirlos en UI.
+- Implementar interceptores HTTP en el frontend para inyectar el token y capturar 401/403.
+- Manejar renovacion de token y cierre de sesion expulsando al usuario en caso de 401.
+- Para despliegues, actualizar SERVICIO_*_URL en el gateway con las URL reales
+  (contenedores, nube, etc.) y exponer solo el puerto del gateway.
+- Documentar en el frontend el mapa de roles y permisos consumiendo el endpoint
+  GET /catalogos/roles.
+
+Fin del documento.
