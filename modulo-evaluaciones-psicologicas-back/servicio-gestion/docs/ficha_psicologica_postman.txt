@@ -1,0 +1,253 @@
+Ficha psicologica - Guía rápida Postman
+=======================================
+
+Variables sugeridas
+-------------------
+- {{gestionBaseUrl}} → URL base del servicio de gestión (por ejemplo https://api.dev.local/servicio-gestion)
+- {{token}} → JWT válido con rol PSICOLOGO o ADMINISTRADOR
+
+Encabezados comunes
+-------------------
+Authorization: Bearer {{token}}
+Content-Type: application/json
+Accept: application/json
+
+1. Crear ficha (datos generales)
+--------------------------------
+Método: POST
+Ruta: {{gestionBaseUrl}}/api/fichas-psicologicas
+Cuerpo (raw → JSON):
+{
+	"personalMilitarId": 1001,
+	"fechaEvaluacion": "2024-08-30",
+	"tipoEvaluacion": "Ingreso",
+	"estado": "Abierta"
+}
+Notas:
+- numeroEvaluacion se genera automáticamente.
+- la condición clínica se selecciona en un paso posterior.
+
+Detalle front paso a paso:
+- Mostrar formulario con datos del militar, fecha y tipo de evaluación.
+- El backend detecta al psicólogo autenticado; no es necesario enviar su ID.
+- Enviar este payload al backend y guardar el id y numeroEvaluacion retornados.
+
+2. Actualizar datos generales
+-----------------------------
+Método: PUT
+Ruta: {{gestionBaseUrl}}/api/fichas-psicologicas/{{fichaId}}/general
+Cuerpo idéntico al de creación; utilice el ID retornado en el paso 1.
+
+Detalle front:
+- Reutilizar para ediciones futuras de la cabecera (fecha, tipo, estado).
+- Solo mostrar cuando el psicólogo necesite corregir la información inicial.
+
+3. Guardar sección de observación clínica
+-----------------------------------------
+Método: PUT
+Ruta: {{gestionBaseUrl}}/api/fichas-psicologicas/{{fichaId}}/observacion
+Cuerpo:
+{
+	"observacionClinica": "Paciente refiere cefaleas frecuentes",
+	"motivoConsulta": "Reubicación operativa",
+	"enfermedadActual": "Cefalea tensional recurrente"
+}
+
+Detalle front:
+- Habilitar formulario específico (observación, motivo, enfermedad actual).
+- Permitir guardar incrementalmente; la respuesta devuelve la ficha completa para refrescar el estado en la UI.
+
+4. Guardar sección de psicoanamnesis
+------------------------------------
+Método: PUT
+Ruta: {{gestionBaseUrl}}/api/fichas-psicologicas/{{fichaId}}/psicoanamnesis
+Cuerpo:
+{
+	"prenatal": {
+		"condicionesBiologicasPadres": "Sin antecedentes relevantes",
+		"condicionesPsicologicasPadres": "Estables",
+		"observacion": "Gestación controlada"
+	},
+	"natal": {
+		"partoNormal": true,
+		"termino": "A termino",
+		"complicaciones": null,
+		"observacion": "Sin complicaciones"
+	},
+	"infancia": {
+		"gradoSociabilidad": "Comunicativo",
+		"relacionPadresHermanos": "Asertiva",
+		"discapacidadIntelectual": false,
+		"gradoDiscapacidad": "Ninguna",
+		"trastornos": "N/A",
+		"tratamientosPsicologicosPsiquiatricos": false,
+		"observacion": "Desarrollo psicomotor acorde a la edad"
+	}
+}
+
+Detalle front:
+- Dividir la UI en subsecciones prenatal, natal e infancia con validaciones por bloque.
+- Enviar un único payload con las tres subsecciones; el backend admite valores nulos donde no aplique.
+- Mostrar nuevamente los datos retornados para confirmar persistencia.
+
+5. Seleccionar condición clínica y plan (si aplica)
+-----------------------------------------------
+Método: PUT
+Ruta: {{gestionBaseUrl}}/api/fichas-psicologicas/{{fichaId}}/condicion
+Cuerpo:
+{
+	"condicion": "Seguimiento (Requiere citas periodicas)",
+	"diagnosticoCie10Codigo": "F32.0",
+	"diagnosticoCie10Descripcion": "Episodio depresivo leve",
+	"planFrecuencia": "Quincenal",
+	"planTipoSesion": "Individual",
+	"planDetalle": "Sesiones quincenales de seguimiento"
+}
+Notas:
+- Ejecute este paso solo después de registrar observación y psicoanamnesis.
+- Para "No presenta psicopatologia (Alta)" omita campos de diagnóstico y plan.
+- Seguimiento o Transferencia requieren código CIE-10, frecuencia, tipo de sesión y detalle.
+- La condición puede actualizarse cuantas veces sea necesario cuando el caso evoluciona.
+
+Detalle front:
+- Mostrar selector con tres opciones: Alta, Seguimiento, Transferencia.
+- Si la opción requiere plan, habilitar campos para código CIE-10 y plan de seguimiento.
+- Desplegar confirmación al persistir; la respuesta indicará la condición actual y dejará null el plan si se eligió Alta.
+
+6. Cambiar estado de la ficha
+-----------------------------
+Método: PATCH
+Ruta: {{gestionBaseUrl}}/api/fichas-psicologicas/{{fichaId}}/estado
+Cuerpo:
+{
+	"estado": "En seguimiento"
+}
+
+Detalle front:
+- Opción para cerrar, archivar o pasar a seguimiento sin alterar otras secciones.
+
+7. Listar fichas con filtros opcionales
+---------------------------------------
+Método: GET
+Ruta: {{gestionBaseUrl}}/api/fichas-psicologicas?psicologoId={{psicologoId}}&personalMilitarId={{personalMilitarId}}&estado=Activa&soloActivas=true
+Notas:
+- Todos los parámetros son opcionales.
+- soloActivas=true limita el resultado a fichas con estado ACTIVA.
+
+Detalle front:
+- Utilizar para bandeja principal con filtros por psicólogo, personal y estado.
+- El campo numeroEvaluacion sirve como identificador visible.
+
+8. Consultar ficha por ID
+-------------------------
+Método: GET
+Ruta: {{gestionBaseUrl}}/api/fichas-psicologicas/{{fichaId}}
+
+Detalle front:
+- Emplear para refrescar datos luego de cada guardado parcial.
+- Respuesta incluye todas las secciones y puede alimentar tabs o paneles de resumen.
+
+9. Historial por personal militar
+---------------------------------
+Método: GET
+Ruta: {{gestionBaseUrl}}/api/fichas-psicologicas/historial/{{personalMilitarId}}
+
+Detalle front:
+- Mostrar línea de tiempo del personal con fichas ordenadas por fecha.
+- Ideal para seleccionar rápidamente la ficha vigente y abrirla para edición.
+
+Valores aceptados (uso preferente)
+----------------------------------
+TipoEvaluacionEnum: Valoracion porte armas | Evaluacion anual | Ingreso | Reintegro | Evaluacion especial | Otro
+EstadoFichaEnum: Activa | Abierta | En seguimiento | Observacion | Cerrada | Archivada | Otro
+CondicionClinicaEnum: No presenta psicopatologia (Alta) | Seguimiento (Requiere citas periodicas) | Transferencia (Derivado a otro especialista o unidad)
+FrecuenciaSeguimientoEnum: Semanal | Quincenal | Mensual | Bimestral | Trimestral | Personalizada
+TipoSesionEnum: Individual | Grupal | Familiar | Pareja | Remota | Mixta
+GradoSociabilidadEnum: Introvertido | Reservado | Neutral | Comunicativo | Extrovertido | Otro
+RelacionFamiliarEnum: Asertiva | Conflictiva | Distante | Sobreprotectora | Inexistente | Otro
+GradoDiscapacidadEnum: Ninguna | Leve | Moderado | Grave | Profundo
+
+Verificaciones rápidas
+----------------------
+- Crear ficha → verificar que numeroEvaluacion y timestamps lleguen en la respuesta.
+- Seleccionar condición → validar que condicion, diagnóstico y plan se reflejen según el caso.
+- Guardar secciones → leer el campo correspondiente en la respuesta para confirmar persistencia.
+- Cambiar estado → corroborar que estado devuelva la nueva etiqueta canónica.
+
+cURL de referencia
+------------------
+export BASE="{{gestionBaseUrl}}"
+export TOKEN="{{token}}"
+
+1. Crear ficha
+curl -X POST "$BASE/api/fichas-psicologicas" \
+	-H "Authorization: Bearer $TOKEN" \
+	-H "Content-Type: application/json" \
+	-d '{
+				"personalMilitarId": 1001,
+				"fechaEvaluacion": "2024-08-30",
+				"tipoEvaluacion": "Ingreso",
+				"estado": "Abierta"
+			}'
+
+2. Guardar observación
+curl -X PUT "$BASE/api/fichas-psicologicas/1/observacion" \
+	-H "Authorization: Bearer $TOKEN" \
+	-H "Content-Type: application/json" \
+	-d '{
+				"observacionClinica": "Paciente refiere cefaleas frecuentes",
+				"motivoConsulta": "Reubicación operativa",
+				"enfermedadActual": "Cefalea tensional recurrente"
+			}'
+
+3. Guardar psicoanamnesis
+curl -X PUT "$BASE/api/fichas-psicologicas/1/psicoanamnesis" \
+	-H "Authorization: Bearer $TOKEN" \
+	-H "Content-Type: application/json" \
+	-d '{
+				"prenatal": {
+					"condicionesBiologicasPadres": "Sin antecedentes relevantes",
+					"condicionesPsicologicasPadres": "Estables",
+					"observacion": "Gestación controlada"
+				},
+				"natal": {
+					"partoNormal": true,
+					"termino": "A termino",
+					"complicaciones": null,
+					"observacion": "Sin complicaciones"
+				},
+				"infancia": {
+					"gradoSociabilidad": "Comunicativo",
+					"relacionPadresHermanos": "Asertiva",
+					"discapacidadIntelectual": false,
+					"gradoDiscapacidad": "Ninguna",
+					"trastornos": "N/A",
+					"tratamientosPsicologicosPsiquiatricos": false,
+					"observacion": "Desarrollo psicomotor acorde a la edad"
+				}
+			}'
+
+4. Seleccionar condición
+curl -X PUT "$BASE/api/fichas-psicologicas/1/condicion" \
+	-H "Authorization: Bearer $TOKEN" \
+	-H "Content-Type: application/json" \
+	-d '{
+				"condicion": "Seguimiento (Requiere citas periodicas)",
+				"diagnosticoCie10Codigo": "F32.0",
+				"diagnosticoCie10Descripcion": "Episodio depresivo leve",
+				"planFrecuencia": "Quincenal",
+				"planTipoSesion": "Individual",
+				"planDetalle": "Sesiones quincenales de seguimiento"
+			}'
+
+5. Cambiar estado
+curl -X PATCH "$BASE/api/fichas-psicologicas/1/estado" \
+	-H "Authorization: Bearer $TOKEN" \
+	-H "Content-Type: application/json" \
+	-d '{"estado": "En seguimiento"}'
+
+6. Consultar ficha completa
+curl -X GET "$BASE/api/fichas-psicologicas/1" -H "Authorization: Bearer $TOKEN"
+
+7. Historial por personal
+curl -X GET "$BASE/api/fichas-psicologicas/historial/1001" -H "Authorization: Bearer $TOKEN"

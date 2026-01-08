@@ -1,6 +1,8 @@
 package ec.mil.dsndft.servicio_catalogos.entity;
 
 import jakarta.persistence.*;
+import org.hibernate.annotations.NotFound;
+import org.hibernate.annotations.NotFoundAction;
 import java.time.LocalDateTime;
 
 @Entity
@@ -21,8 +23,9 @@ public class Usuario {
     @Column(length = 100)
     private String email;
 
-    @ManyToOne(optional = false)
-    @JoinColumn(name = "rol_id", nullable = false)
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "rol_id")
+    @NotFound(action = NotFoundAction.IGNORE)
     private Role role;
 
     @Column(nullable = false)

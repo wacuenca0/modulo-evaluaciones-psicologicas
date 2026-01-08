@@ -45,6 +45,9 @@ public class DocumentoFicha {
     @Column(columnDefinition = "CLOB")
     private String descripcion;
 
+    @Column(name = "seguimiento_id")
+    private Long seguimientoId;
+
     @Column(name = "fecha_subida")
     private LocalDate fechaSubida;
 

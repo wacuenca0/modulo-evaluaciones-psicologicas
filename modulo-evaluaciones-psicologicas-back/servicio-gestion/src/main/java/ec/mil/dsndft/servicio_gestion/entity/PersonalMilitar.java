@@ -24,6 +24,13 @@ public class PersonalMilitar {
     @Column(nullable = false, length = 200)
     private String apellidosNombres;
 
+    @Column(nullable = false, length = 20)
+    private String tipoPersona;
+
+    @Builder.Default
+    @Column(nullable = false)
+    private Boolean esMilitar = false;
+
     @Column(nullable = false)
     private LocalDate fechaNacimiento;
 
@@ -39,14 +46,20 @@ public class PersonalMilitar {
     @Column(length = 50)
     private String estadoCivil;
 
+    @Builder.Default
     @Column(nullable = false)
     private Integer nroHijos = 0;
 
     @Column(length = 100)
     private String ocupacion;
 
+    @Builder.Default
     @Column(nullable = false)
     private Boolean servicioActivo = true;
+
+    @Builder.Default
+    @Column(nullable = false)
+    private Boolean servicioPasivo = false;
 
     @Column(length = 100)
     private String seguro;
@@ -78,12 +91,15 @@ public class PersonalMilitar {
     @Column(length = 100)
     private String email;
 
+    @Builder.Default
     @Column(nullable = false)
     private Boolean activo = true;
 
+    @Builder.Default
     @Column(name = "created_at", nullable = false, updatable = false)
     private LocalDateTime createdAt = LocalDateTime.now();
 
+    @Builder.Default
     @Column(name = "updated_at", nullable = false)
     private LocalDateTime updatedAt = LocalDateTime.now();
 

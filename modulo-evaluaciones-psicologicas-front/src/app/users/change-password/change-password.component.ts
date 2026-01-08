@@ -3,13 +3,12 @@ import { FormGroup, FormBuilder, ReactiveFormsModule, Validators } from '@angula
 import { CommonModule } from '@angular/common';
 import { ActivatedRoute, Router } from '@angular/router';
 import { UserService } from '../../services/user.service';
-import { AppNavComponent } from '../../general/nav/app-nav.component';
 import { UsersTabsComponent } from '../users-tabs.component';
 
 @Component({
   selector: 'app-change-password',
   templateUrl: './change-password.component.html',
-  imports: [CommonModule, ReactiveFormsModule, AppNavComponent, UsersTabsComponent],
+  imports: [CommonModule, ReactiveFormsModule, UsersTabsComponent],
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class ChangePasswordComponent {

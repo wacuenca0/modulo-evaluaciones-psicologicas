@@ -2,14 +2,13 @@ import { ChangeDetectionStrategy, Component, inject, signal } from '@angular/cor
 import { CommonModule } from '@angular/common';
 import { RouterModule } from '@angular/router';
 import { UserService } from '../../services/user.service';
-import { AppNavComponent } from '../../general/nav/app-nav.component';
 import { UsersTabsComponent } from '../users-tabs.component';
 import { UserDTO } from '../../models/auth.models';
 
 @Component({
   selector: 'app-user-list',
   templateUrl: './user-list.component.html',
-  imports: [CommonModule, RouterModule, AppNavComponent, UsersTabsComponent],
+  imports: [CommonModule, RouterModule, UsersTabsComponent],
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class UserListComponent  {

@@ -17,6 +17,11 @@ import { RouterLink, RouterLinkActive } from '@angular/router';
          class="px-3 py-1.5 rounded-full border border-indigo-600 text-indigo-700 hover:bg-indigo-50 transition">
         Nuevo
       </a>
+      <a routerLink="/users/password-requests" routerLinkActive="bg-indigo-600 text-white"
+         [routerLinkActiveOptions]="{ exact: true }"
+         class="px-3 py-1.5 rounded-full border border-indigo-600 text-indigo-700 hover:bg-indigo-50 transition">
+        Solicitudes
+      </a>
     </nav>
   `
 })

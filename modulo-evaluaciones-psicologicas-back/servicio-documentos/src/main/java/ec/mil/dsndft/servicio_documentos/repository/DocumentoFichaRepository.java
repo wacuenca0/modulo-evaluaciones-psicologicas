@@ -9,4 +9,5 @@ import java.util.List;
 @Repository
 public interface DocumentoFichaRepository extends JpaRepository<DocumentoFicha, Long> {
     List<DocumentoFicha> findByFichaIdAndActivoTrue(Long fichaId);
+    List<DocumentoFicha> findBySeguimientoIdAndActivoTrue(Long seguimientoId);
 }

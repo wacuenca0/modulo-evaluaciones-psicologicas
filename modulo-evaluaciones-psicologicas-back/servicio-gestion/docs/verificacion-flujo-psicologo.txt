@@ -1,0 +1,58 @@
+VERIFICACION DEL FLUJO DE ATENCION PERSONALIZADA
+=================================================
+
+Contexto
+--------
+Referencia utilizada: flujo descrito en servicio-gestion/flujo-atencion-personalizada.txt (enero 2026). Se validaron los microservicios "servicio-gestion" y "servicio-documentos" contra dicho flujo.
+
+1. Precondiciones y roles
+-------------------------
+- Cumple: todos los controladores relevantes exigen JWT y restringen roles tal como indica el flujo (PSICOLOGO para escritura, ADMINISTRADOR/PSICOLOGO para lecturas).
+- Evidencia: anotaciones @PreAuthorize en los controladores REST mencionados en la tabla de cumplimiento adjunta.
+
+2. Personal Militar
+-------------------
+- GET general, GET por id y GET /buscar implementados conforme (valida cédula, admite paginación y fallas 400 cuando falta criterio).
+- POST/PUT validan alias en snake_case y normalizan enumeraciones (Sexo, Etnia, EstadoCivil, Seguro, TipoPersona) a valores canónicos.
+- Brecha parcial: cuando se envían simultáneamente fecha_nacimiento y edad, el servicio conserva la edad declarada en lugar de recalcularla (se esperaba ajuste); implica posible divergencia entre edad y fecha.
+- Brecha menor: si no se envía tipo_persona el backend asume "Militar" por defecto, mientras el flujo lo declara obligatorio.
+
+3. Fichas Psicológicas
+----------------------
+- POST solo acepta los datos generales (personal_militar_id, fecha_evaluacion, tipo_evaluacion, estado). Otros campos del flujo se cargan mediante endpoints separados: PUT /{id}/observacion, PUT /{id}/psicoanamnesis, PUT /{id}/condicion.
+- Brecha: el flujo solicita numero_historia_clinica, exposicion_intrauterina y otras claves planas; estos campos no existen en la entidad ni en los DTO actuales. El backend genera numeroEvaluacion automático y no expone bandera de exposición intrauterina.
+- Respuesta DTO retorna las secciones anidadas (seccionObservacion, seccionPrenatal, seccionNatal, seccionInfancia) y no los campos planos mostrados en el flujo. Al consumir el API se debe mapear las secciones a los campos esperados.
+- PATCH /estado, POST /{id}/finalizar, DELETE de secciones y condicionales funcionan y respetan roles.
+
+4. Seguimientos Psicológicos
+----------------------------
+- CRUD implementado según lo descrito: valida psicólogo autenticado y aplica la misma lógica de condición/plan a través de FichaCondicionManager.
+- Reglas de obligatoriedad de observaciones y normalización de enumeraciones se cumplen. No se hallaron brechas frente al flujo.
+
+5. Documentos asociados
+-----------------------
+- Nuevos endpoints GET /fichas/{id}/documentos y GET /seguimientos/{id}/documentos presentes y filtrando por activo.
+- POST/PUT/DELETE permiten asociar seguimientos opcionalmente.
+- Brecha: no se valida que seguimientoId pertenezca a la ficha indicada, requisito explícito en el flujo.
+
+6. Reportes y estadística
+-------------------------
+- Reportes de gestión implementan los indicadores y el nuevo campo conTrastornos.
+- Filtros por psicólogo se restringen automáticamente cuando el usuario autenticado es PSICOLOGO, cumpliendo la expectativa del flujo.
+
+7. Implicaciones para el front-end
+----------------------------------
+- Crear ficha: 1) POST /api/fichas-psicologicas con datos generales. 2) PUT /{id}/observacion. 3) PUT /{id}/psicoanamnesis. 4) PUT /{id}/condicion cuando aplique. 5) Opcionalmente PATCH /{id}/estado o POST /{id}/finalizar.
+- Ajustar mapeos de las secciones anidadas hacia los campos planos mostrados en la UI.
+- En la ficha no se puede capturar exposicion_intrauterina ni numero_historia_clinica; se requiere definir si se introducirán en el modelo o se eliminarán del formulario.
+- En carga de documentos, validar del lado del cliente que el seguimiento pertenece a la ficha antes de enviar la petición.
+
+Resumen de brechas detectadas
+-----------------------------
+1. Divergencia edad vs fecha en POST/PUT de personal militar.
+2. Tipo_persona opcional en backend.
+3. Campos planos (numero_historia_clinica, exposicion_intrauterina, etc.) ausentes en APIs de ficha.
+4. DTO de ficha responde con secciones anidadas, no con las llaves planas del flujo.
+5. Falta validar relación seguimiento-ficha en servicio de documentos.
+
+Se recomienda definir si se ajusta el flujo documental o si se amplía el backend para cubrir los puntos anteriores antes de avanzar con el front-end.

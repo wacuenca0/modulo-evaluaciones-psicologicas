@@ -1,0 +1,315 @@
+FLUJO DE ATENCION PERSONALIZADA
+================================
+
+Contexto general
+----------------
+Base path de los servicios a traves del gateway: http://127.0.0.1:8080
+
+- Gestion: http://127.0.0.1:8080/gestion
+- Documentos: http://127.0.0.1:8080/documentos
+
+Todas las peticiones requieren JWT en el header Authorization: Bearer <token>, salvo los endpoints publicos de autenticacion. El rol PSICOLOGO puede crear y editar; los roles ADMINISTRADOR y PSICOLOGO pueden consultar.
+
+1. Personal militar
+-------------------
+Lista y busqueda
+- GET /gestion/api/personal-militar (roles ADMINISTRADOR, PSICOLOGO)
+- GET /gestion/api/personal-militar/{id}
+- GET /gestion/api/personal-militar/buscar?cedula=... o ?apellidos=... (valida que exista algun criterio)
+
+Creacion y actualizacion
+- POST /gestion/api/personal-militar (rol PSICOLOGO)
+- PUT /gestion/api/personal-militar/{id} (rol PSICOLOGO)
+
+Campos destacados del request (snake_case soportado por @JsonAlias):
+- cedula (obligatoria, unica)
+- apellidos_nombres (obligatorio)
+- tipo_persona (normalizado a Militar, Dependiente, Aspirante, Civil; si se omite se asume Militar)
+- es_militar (opcional; fuerza el tipo_persona)
+- fecha_nacimiento o edad (al menos uno obligatorio)
+- sexo (obligatorio; normalizado a Hombre o Mujer)
+- etnia, estado_civil, seguro aceptan sinonimos y se guardan en valor canonico
+- servicio_activo / servicio_pasivo determinan la situacion laboral
+
+Reglas relevantes
+- Si llegan fecha_nacimiento y edad se conserva la edad declarada.
+- La edad no puede ser negativa. 
+- Los campos tipo texto se recortan; cadenas vacias quedan como null.
+
+Flujo para registrar o actualizar personal militar
+1. Verificar existencia:
+   - GET /gestion/api/personal-militar/buscar?cedula=<valor> ⇒ 200 con DTO si existe o 404 si no.
+   - También es posible buscar por apellidos con ?apellidos=<termino>&page=0&size=10.
+2. Si no existe, enviar POST con el payload completo requerido.
+3. Si existe, usar PUT /gestion/api/personal-militar/{id} con el mismo esquema para actualizar.
+
+Payload completo de ejemplo (creación):
+{
+  "cedula": "0202020202",
+  "apellidos_nombres": "Ruiz Andrade Maria",
+  "tipo_persona": "Dependiente",
+  "es_militar": false,
+  "fecha_nacimiento": "1990-06-15",
+  "edad": 35,
+  "sexo": "Mujer",
+  "etnia": "Mestiza",
+  "estado_civil": "Casada",
+  "numero_hijos": 1,
+  "ocupacion": "Profesional de la salud",
+  "servicio_activo": false,
+  "servicio_pasivo": true,
+  "seguro": "ISSFA",
+  "grado": "Mayor",
+  "especialidad": "Psicologia",
+  "provincia": "Pichincha",
+  "canton": "Quito",
+  "parroquia": "El Quinche",
+  "barrio_sector": "San Juan",
+  "telefono": "022345678",
+  "celular": "0987654321",
+  "email": "maria.ruiz@example.mil.ec",
+  "activo": true
+}
+
+Campos y validaciones
+- "edad": opcional si se envía "fecha_nacimiento"; si se proporcionan ambos, la edad declarada no se recalcula.
+- "servicio_activo" y "servicio_pasivo": determinan la situación actual; para militares activos usar true/false según corresponda.
+- "email": validado con patrón de correo.
+- Valores de tipo catálogo se normalizan (TipoPersonaEnum, SexoEnum, EstadoCivilEnum, EtniaEnum, SeguroEnum).
+- Cadenas vacías se persisten como null después de hacer trim.
+
+Respuestas y errores comunes
+- POST exitoso → 201 con PersonalMilitarDTO (incluye id, createdAt, updatedAt, flags normalizados).
+- PUT exitoso → 200 con DTO actualizado.
+- 400 "La cédula ya está registrada" cuando se intenta duplicar.
+- 400 "Debe proporcionar edad o fecha de nacimiento" cuando faltan ambos.
+- 400 "Tipo de persona no soportado" / "El sexo es obligatorio" cuando el valor no coincide con los enums soportados.
+- 404 "Personal militar no encontrado" para GET/PUT cuando el id no existe.
+
+Secuencia de prueba recomendada
+1. POST con el payload completo.
+2. GET /gestion/api/personal-militar/buscar?cedula=0202020202 para confirmar.
+3. PUT /gestion/api/personal-militar/{id} cambiando, por ejemplo, "ocupacion": "Psicóloga institucional".
+4. Repetir GET para confirmar el cambio.
+5. Utilizar el id devuelto al crear fichas psicológicas.
+
+2. Psicologos
+-------------
+- GET /gestion/api/psicologos (ADMINISTRADOR, PSICOLOGO)
+- POST /gestion/api/psicologos y PUT /gestion/api/psicologos/{id} (ADMINISTRADOR)
+Al crear un usuario en servicio-catalogos se debe enlazar el psicologo por cedula y username para que el flujo funcione.
+
+3. Fichas psicologicas (creacion por secciones)
+-----------------------------------------------
+Paso 1: Crear ficha (datos generales)
+Endpoint: POST /gestion/api/fichas-psicologicas (rol PSICOLOGO)
+Body minimo:
+{
+  "personal_militar_id": 105,
+  "fecha_evaluacion": "2025-12-17",
+  "tipo_evaluacion": "Evaluacion anual",
+  "estado": "Abierta"
+}
+Consideraciones:
+- El sistema asigna automaticamente numeroEvaluacion y el psicologo autenticado.
+- fecha_evaluacion es opcional; si se omite se usa la fecha actual.
+- tipo_evaluacion se normaliza con TipoEvaluacionEnum (sin acentos).
+- estado se normaliza con EstadoFichaEnum.
+- La respuesta incluye secciones vacias (observacion, prenatal, natal, infancia) listas para ser completadas.
+
+Paso 2: Observacion clinica
+Endpoint: PUT /gestion/api/fichas-psicologicas/{id}/observacion (PSICOLOGO)
+Body:
+{
+  "observacion_clinica": "Paciente colaborador",
+  "motivo_consulta": "Valoracion anual",
+  "enfermedad_actual": "Sin novedades"
+}
+Reglas: observacion_clinica y motivo_consulta son obligatorios (NotBlank). enfermedad_actual es opcional (max 4000 caracteres).
+
+Paso 3: Psicoanamnesis
+Endpoint: PUT /gestion/api/fichas-psicologicas/{id}/psicoanamnesis (PSICOLOGO)
+Body ejemplo:
+{
+  "prenatal": {
+    "condiciones_biologicas_padres": "Sin patologias de base",
+    "condiciones_psicologicas_padres": "Estables",
+    "observacion_prenatal": "Controles regulares"
+  },
+  "natal": {
+    "parto_normal": true,
+    "termino_parto": "A termino",
+    "complicaciones_parto": null,
+    "observacion_natal": "Sin incidencias"
+  },
+  "infancia": {
+    "grado_sociabilidad": "Comunicativo",
+    "relacion_padres_hermanos": "Asertiva",
+    "discapacidad_intelectual": false,
+    "grado_discapacidad": "Ninguna",
+    "trastornos": null,
+    "tratamientos_psicologicos_psiquiatricos": false,
+    "observacion_infancia": "Desarrollo acorde a la edad"
+  }
+}
+Reglas: los valores de grado_sociabilidad, relacion_padres_hermanos y grado_discapacidad se normalizan via enums. Si se omite una subseccion se mantiene el valor actual.
+
+Paso 4: Condicion clinica y plan
+Endpoint: PUT /gestion/api/fichas-psicologicas/{id}/condicion (PSICOLOGO)
+Body ejemplo:
+{
+  "condicion": "Seguimiento",
+  "diagnostico_cie10_codigo": "F41.1",
+  "diagnostico_cie10_descripcion": "Trastorno de ansiedad generalizada",
+  "plan_frecuencia": "Mensual",
+  "plan_tipo_sesion": "Individual",
+  "plan_detalle": "Sesiones mensuales"
+}
+Reglas:
+- condicion se valida con CondicionClinicaEnum.
+- Para Seguimiento o Transferencia se exige codigo CIE-10 y plan (frecuencia + tipo_sesion).
+- Para Alta se limpia diagnostico y plan.
+
+Pasos opcionales
+- PATCH /gestion/api/fichas-psicologicas/{id}/estado con body { "estado": "Observacion" }
+- POST /gestion/api/fichas-psicologicas/{id}/finalizar para marcar estado Cerrada.
+- DELETE /gestion/api/fichas-psicologicas/{id}/observacion elimina la seccion de observacion.
+- DELETE /gestion/api/fichas-psicologicas/{id}/psicoanamnesis elimina las secciones prenatal, natal e infancia.
+- DELETE /gestion/api/fichas-psicologicas/{id}/condicion restablece condicion Alta.
+
+Consultas principales
+- GET /gestion/api/fichas-psicologicas?psicologoId=...&personalMilitarId=...&estado=...
+- GET /gestion/api/fichas-psicologicas/{id}
+- GET /gestion/api/fichas-psicologicas/historial/{personalMilitarId}
+Los filtros de psicologo se fuerzan al profesional autenticado cuando el token corresponde a PSICOLOGO.
+
+Escenario de prueba: múltiples fichas para el mismo personal
+-----------------------------------------------------------
+1) Crear o actualizar el personal militar (ver sección 1) y guardar el id devuelto (ej.: 105).
+
+2) Ficha 1 – apertura y alta
+   - POST /gestion/api/fichas-psicologicas
+     {
+       "personal_militar_id": 105,
+       "fecha_evaluacion": "2026-01-06",
+       "tipo_evaluacion": "Evaluacion inicial",
+       "estado": "Activa"
+     }
+     → 201 con estado Activa y condicion por defecto Alta.
+   - PUT /gestion/api/fichas-psicologicas/{idFicha1}/observacion (opcional para completar la sección).
+   - PUT /gestion/api/fichas-psicologicas/{idFicha1}/condicion
+     {
+       "condicion": "Alta"
+     }
+     → Limpia diagnóstico y plan si existían.
+   - POST /gestion/api/fichas-psicologicas/{idFicha1}/finalizar
+     → Estado queda Cerrada y la condición permanece en Alta.
+
+3) Ficha 2 – apertura y seguimiento
+   - POST /gestion/api/fichas-psicologicas
+     {
+       "personal_militar_id": 105,
+       "fecha_evaluacion": "2026-02-10",
+       "tipo_evaluacion": "Evaluacion seguimiento",
+       "estado": "Activa"
+     }
+     → 201 con nuevo número de evaluación independiente.
+   - PUT /gestion/api/fichas-psicologicas/{idFicha2}/condicion
+     {
+       "condicion": "Seguimiento",
+       "diagnostico_cie10_codigo": "F41.1",
+       "diagnostico_cie10_descripcion": "Trastorno de ansiedad generalizada",
+       "plan_frecuencia": "Mensual",
+       "plan_tipo_sesion": "Individual",
+       "plan_detalle": "Sesiones mensuales presenciales"
+     }
+     → Valida los campos obligatorios para Seguimiento/Transferencia y persiste diagnóstico/plan.
+   - (Opcional) PATCH /gestion/api/fichas-psicologicas/{idFicha2}/estado con { "estado": "Observacion" } para moverla a observación activa.
+
+4) Historial y verificación de estados
+   - GET /gestion/api/fichas-psicologicas/historial/105
+     → Lista ordenada por fecha evaluacion desc, cada item incluye estado, condicion, diagnóstico y plan.
+   - GET /gestion/api/fichas-psicologicas?personalMilitarId=105&soloActivas=true
+     → Devuelve únicamente las fichas con estado Activa/Observacion del paciente.
+   - GET /gestion/api/fichas-psicologicas/condicion?condicion=Seguimiento&personalMilitarId=105
+     → Filtra solo las fichas en Seguimiento para el paciente indicado (admiste filtros opcionales de psicólogo/paciente).
+   - GET /gestion/api/fichas-psicologicas/numero/{numeroEvaluacion}
+     → Devuelve la ficha completa (todas las secciones) usando el número único generado en la creación (ej.: FIC-20260106-ABC123EF4567).
+
+5) Crear nuevas fichas según sea necesario repitiendo los pasos 2 o 3. No existe restricción para tener múltiples fichas por el mismo personal; cada apertura genera un numeroEvaluacion único y conserva el historial completo.
+
+4. Seguimientos psicologicos
+----------------------------
+Endpoints clave (ADMINISTRADOR y PSICOLOGO tienen lectura/escritura):
+- GET /gestion/api/seguimientos-psicologicos?fichaPsicologicaId=...
+- GET /gestion/api/seguimientos-psicologicos/{id}
+- POST /gestion/api/seguimientos-psicologicos
+- PUT /gestion/api/seguimientos-psicologicos/{id}
+- DELETE /gestion/api/seguimientos-psicologicos/{id}
+
+Request base para POST/PUT:
+{
+  "ficha_psicologica_id": 140,
+  "fecha_seguimiento": "2025-12-26",
+  "observaciones": "Se mantiene estable",
+  "condicion": "Seguimiento",
+  "diagnostico_cie10_codigo": "F41.1",
+  "diagnostico_cie10_descripcion": "Ansiedad generalizada",
+  "plan_frecuencia": "Mensual",
+  "plan_tipo_sesion": "Individual",
+  "plan_detalle": "Mantener teleconsultas"
+}
+Reglas:
+- El psicologo autenticado debe coincidir con el asignado a la ficha; se valida en servicio.
+- Observaciones es obligatorio y se recorta.
+- Si se incluye informacion de condicion/plan se aplican las mismas reglas que en la ficha.
+
+5. Documentos asociados
+-----------------------
+Base path: /documentos/api/documentos
+
+Consultas
+- GET /documentos/api/documentos/fichas/{fichaId}/documentos (lista activos por ficha)
+- GET /documentos/api/documentos/seguimientos/{seguimientoId}/documentos (lista activos por seguimiento)
+
+Gestion
+- POST /documentos/api/documentos/documentos
+- PUT /documentos/api/documentos/documentos/{id}
+- DELETE /documentos/api/documentos/documentos/{id} (baja logica)
+
+Request ejemplo de creacion:
+{
+  "fichaId": 140,
+  "tipoDocumentoId": 3,
+  "seguimientoId": 301,
+  "nombreArchivo": "plan-tratamiento-enero.pdf",
+  "rutaArchivo": "s3://evaluaciones/documentos/140/plan-enero.pdf"
+}
+Notas: actualmente el servicio no valida que seguimientoId pertenezca a la ficha indicada, por lo que debe controlarse en el front o mediante mejora futura.
+
+6. Reportes de gestion
+----------------------
+- GET /gestion/api/reportes/atenciones-psicologos?psicologoId=...&fechaDesde=...&fechaHasta=...
+- GET /gestion/api/reportes/personal-observacion
+- GET /gestion/api/reportes/estadistica-epidemiologica
+Los reportes aplican filtros automaticos segun el rol autenticado (PSICOLOGO solo ve su informacion).
+
+Indicadores de estadistica epidemiologica incluidos:
+- totalFichas
+- personasEvaluadas
+- fichasActivas
+- fichasObservacion
+- conDiscapacidadIntelectual
+- conTrastornos (conteo de fichas donde seccionInfancia.trastornos no es vacio)
+- conTratamientosPsicologicos
+
+7. Resumen del flujo del psicologo
+----------------------------------
+1) Buscar o registrar al personal militar.
+2) Crear la ficha (POST) y completar las secciones: observacion, psicoanamnesis, condicion.
+3) Actualizar estado o finalizar la ficha segun el proceso clinico.
+4) Registrar seguimientos con la misma ficha y plan.
+5) Adjuntar documentos a la ficha o a cada seguimiento cuando sea necesario.
+6) Consultar reportes para seguimiento de atenciones, personas en observacion y estadistica epidemiologica.
+
+Este documento refleja el comportamiento actual (enero 2026) de los microservicios gestion y documentos luego de los cambios recientes. Actualice el front-end para consumir los endpoints en el orden descrito y validar los campos obligatorios por cada seccion.

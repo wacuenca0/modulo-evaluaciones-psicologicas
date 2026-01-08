@@ -9,6 +9,7 @@ import org.springframework.stereotype.Service;
 
 import javax.crypto.SecretKey;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.util.StringUtils;
 import java.nio.charset.StandardCharsets;
 import java.util.Date;
 import java.util.HashMap;
@@ -18,11 +19,19 @@ import java.util.function.Function;
 @Service
 public class JwtService {
 
-    // Inyectar clave desde configuración/variables de entorno (application.yml security.jwt.secret)
+    // Inyectar clave desde configuración/variables de entorno (application.yml security.jwt)
     private final SecretKey key;
+    private final String issuer;
+    private final String audience;
 
-    public JwtService(@Value("${security.jwt.secret:cambia-esta-clave-super-segura-de-32+caracteres-2025}") String secret) {
+    public JwtService(
+        @Value("${security.jwt.secret:cambia-esta-clave-super-segura-de-32+caracteres-2025}") String secret,
+        @Value("${security.jwt.issuer:}") String issuer,
+        @Value("${security.jwt.audience:}") String audience
+    ) {
         this.key = Keys.hmacShaKeyFor(secret.getBytes(StandardCharsets.UTF_8));
+        this.issuer = issuer;
+        this.audience = audience;
     }
 
     public String extractUsername(String token) {
@@ -53,11 +62,20 @@ public class JwtService {
             .toList();
         extraClaims.put("roles", roles);
 
-        return Jwts.builder()
+        var builder = Jwts.builder()
             .setClaims(extraClaims)
             .setSubject(userDetails.getUsername())
             .setIssuedAt(new Date(System.currentTimeMillis()))
-            .setExpiration(new Date(System.currentTimeMillis() + 1000L * 60 * 60 * 10))
+            .setExpiration(new Date(System.currentTimeMillis() + 1000L * 60 * 60 * 10));
+
+        if (StringUtils.hasText(issuer)) {
+            builder.setIssuer(issuer);
+        }
+        if (StringUtils.hasText(audience)) {
+            builder.setAudience(audience);
+        }
+
+        return builder
             .signWith(key, SignatureAlgorithm.HS256)
             .compact();
         }

@@ -2,31 +2,32 @@ package ec.mil.dsndft.servicio_gestion.model.dto;
 
 import lombok.Data;
 
+import java.time.LocalDate;
+import java.time.LocalDateTime;
+
 @Data
 public class FichaPsicologicaDTO {
     private Long id;
     private Long personalMilitarId;
+    private String personalMilitarNombre;
+    private String personalMilitarCedula;
     private Long psicologoId;
-    private String nroHistoriaClinica;
-    private String observacionClinica;
-    private String motivoConsulta;
-    private String enfermedadActual;
-    private String historiaPasadaEnfermedad;
-    private Boolean tomaMedicacion;
-    private String tipoMedicacion;
-    private Boolean hospitalizacionRehabilitacion;
-    private String tiempoHospitalizacion;
-    private String exposicionIntrauterina;
-    private String condicionesEconomicasSociales;
-    private Boolean partoNormal;
-    private String complicacionesParto;
-    private String etapasEvolutivasNatales;
-    private String gradoSociabilidad;
-    private String relacionPadresHermanos;
-    private Boolean discapacidadIntelectual;
-    private String gradoDiscapacidad;
-    private Boolean trastornosEpilepsia;
-    private Boolean tratamientosPsicologicosPsiquiatricos;
-    private String observacionesFuncionesCognitivas;
+    private String psicologoNombre;
+    private String psicologoUsername;
+    private String numeroEvaluacion;
+    private LocalDate fechaEvaluacion;
+    private String tipoEvaluacion;
+    private ObservacionClinicaSectionDTO seccionObservacion;
+    private PsicoanamnesisPrenatalDTO seccionPrenatal;
+    private PsicoanamnesisNatalDTO seccionNatal;
+    private PsicoanamnesisInfanciaDTO seccionInfancia;
     private String estado;
+    private String condicion;
+    private String diagnosticoCie10Codigo;
+    private String diagnosticoCie10Descripcion;
+    private String planFrecuencia;
+    private String planTipoSesion;
+    private String planDetalle;
+    private LocalDateTime createdAt;
+    private LocalDateTime updatedAt;
 }

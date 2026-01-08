@@ -1,0 +1,5 @@
+--
+-- Este archivo se mantiene solo como referencia documental.
+-- Ya no se requieren scripts manuales porque la aplicación ajusta el esquema
+-- mediante Hibernate (ddl-auto=update). No ejecutar nada desde aquí.
+--

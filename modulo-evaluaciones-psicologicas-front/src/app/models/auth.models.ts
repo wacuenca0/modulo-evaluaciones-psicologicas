@@ -23,19 +23,31 @@ export interface LoginResponseDTO {
   refreshToken?: string;
 }
 
+export interface CreateUserPsicologoDTO {
+  cedula: string;
+  nombres: string;
+  apellidos: string;
+  telefono?: string | null;
+  celular?: string | null;
+  grado?: string | null;
+  unidadMilitar?: string | null;
+  especialidad?: string | null;
+}
+
 export interface CreateUserRequestDTO {
   username: string;
   email: string;
   password: string;
   roleId: number;
+  active?: boolean;
+  psicologo?: CreateUserPsicologoDTO;
 }
 
 export interface UpdateUserRequestDTO {
-  id: number;
   username: string;
-  email: string;
-  roleId: number;
-  active: boolean;
+  email?: string;
+  roleId?: number;
+  active?: boolean;
   password?: string;
 }
 

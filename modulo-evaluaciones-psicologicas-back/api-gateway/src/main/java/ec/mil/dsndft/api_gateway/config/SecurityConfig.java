@@ -32,10 +32,14 @@ public class SecurityConfig {
     public SecurityWebFilterChain springSecurityFilterChain(ServerHttpSecurity http) {
         AuthenticationWebFilter authenticationWebFilter = new AuthenticationWebFilter(authenticationManager);
         authenticationWebFilter.setServerAuthenticationConverter(authenticationConverter);
-        ServerWebExchangeMatcher publicEndpoints = ServerWebExchangeMatchers.pathMatchers("/auth/**", "/actuator/**");
-        authenticationWebFilter.setRequiresAuthenticationMatcher(
-            new NegatedServerWebExchangeMatcher(publicEndpoints)
+        ServerWebExchangeMatcher publicEndpoints = ServerWebExchangeMatchers.matchers(
+            ServerWebExchangeMatchers.pathMatchers("/auth/**"),
+            ServerWebExchangeMatchers.pathMatchers("/catalogos/api/auth/**"),
+            ServerWebExchangeMatchers.pathMatchers("/gestion/api/auth/**"),
+            ServerWebExchangeMatchers.pathMatchers("/documentos/api/auth/**"),
+            ServerWebExchangeMatchers.pathMatchers("/actuator/**")
         );
+        authenticationWebFilter.setRequiresAuthenticationMatcher(new NegatedServerWebExchangeMatcher(publicEndpoints));
 
         return http
             .csrf(ServerHttpSecurity.CsrfSpec::disable)
@@ -51,7 +55,14 @@ public class SecurityConfig {
             )
             .authorizeExchange(exchange -> exchange
                 .pathMatchers(HttpMethod.OPTIONS, "/**").permitAll()
-                .pathMatchers("/auth/**", "/actuator/health", "/actuator/info").permitAll()
+                .pathMatchers(
+                    "/auth/**",
+                    "/catalogos/api/auth/**",
+                    "/gestion/api/auth/**",
+                    "/documentos/api/auth/**",
+                    "/actuator/health",
+                    "/actuator/info"
+                ).permitAll()
                 .anyExchange().authenticated()
             )
             .addFilterAt(authenticationWebFilter, SecurityWebFiltersOrder.AUTHENTICATION)

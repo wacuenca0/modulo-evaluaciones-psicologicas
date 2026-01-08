@@ -1,13 +1,14 @@
 import { Injectable, inject } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Observable, map } from 'rxjs';
-import { environment } from '../../environments/environment';
+import { buildApiUrl } from '../core/config/api.config';
 import { UserDTO, CreateUserRequestDTO, UpdateUserRequestDTO, ChangePasswordRequestDTO } from '../models/auth.models';
 
 @Injectable({ providedIn: 'root' })
 export class UserService {
   private readonly http = inject(HttpClient);
-  private readonly base = `${environment.catalogBaseUrl}/usuarios`;
+  private readonly base = buildApiUrl('catalogos', '/users');
+  private readonly passwordEndpoint = `${this.base}/password`;
 
   list(): Observable<UserDTO[]> {
     return this.http.get<UserDTO[]>(this.base).pipe(map(list => list?.map(userMapper) ?? []));
@@ -15,7 +16,7 @@ export class UserService {
 
   find(username: string): Observable<UserDTO> {
     return this.http
-      .get<UserDTO>(`${this.base}/${encodeURIComponent(username)}`)
+      .get<UserDTO>(this.resolveUserPath(username))
       .pipe(map(userMapper));
   }
 
@@ -28,11 +29,16 @@ export class UserService {
   }
 
   delete(username: string): Observable<void> {
-    return this.http.delete<void>(`${this.base}/${encodeURIComponent(username)}`);
+    return this.http.delete<void>(this.resolveUserPath(username));
   }
 
   changePassword(payload: ChangePasswordRequestDTO): Observable<void> {
-    return this.http.put<void>(`${this.base}/password`, payload);
+    return this.http.put<void>(this.passwordEndpoint, payload);
+  }
+
+  private resolveUserPath(username: string): string {
+    const encoded = encodeURIComponent(username);
+    return `${this.base}/${encoded}`;
   }
 }
 

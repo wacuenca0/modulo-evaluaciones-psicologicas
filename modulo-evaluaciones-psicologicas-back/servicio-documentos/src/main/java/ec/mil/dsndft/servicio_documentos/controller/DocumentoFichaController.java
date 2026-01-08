@@ -33,6 +33,12 @@ public class DocumentoFichaController {
         return ResponseEntity.ok(documentoFichaService.findActivosByFicha(fichaId));
     }
 
+    @GetMapping("/seguimientos/{seguimientoId}/documentos")
+    @Operation(summary = "Listar documentos de un seguimiento", description = "Obtiene los documentos activos asociados a un seguimiento psicológico específico")
+    public ResponseEntity<List<DocumentoFichaDTO>> findActivosBySeguimiento(@PathVariable Long seguimientoId) {
+        return ResponseEntity.ok(documentoFichaService.findActivosBySeguimiento(seguimientoId));
+    }
+
     @GetMapping("/documentos/{id}")
     @Operation(summary = "Obtener documento de ficha", description = "Consulta un documento adjunto por su identificador")
     @ApiResponse(responseCode = "200", description = "Documento encontrado", content = @Content(schema = @Schema(implementation = DocumentoFichaDTO.class)))

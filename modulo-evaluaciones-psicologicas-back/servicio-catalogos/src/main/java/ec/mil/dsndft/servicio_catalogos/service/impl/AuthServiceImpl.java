@@ -15,6 +15,10 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.transaction.annotation.Transactional;
+
+import java.util.HashMap;
+import java.util.Map;
 
 @Service
 public class AuthServiceImpl implements AuthService {
@@ -39,6 +43,7 @@ public class AuthServiceImpl implements AuthService {
     }
 
     @Override
+    @Transactional(readOnly = true)
     public String login(LoginRequestDTO loginRequestDTO) {
         log.info("Login attempt for username={} (plainAuthEnabled={})", loginRequestDTO.getUsername(), plainAuthEnabled);
         var usuarioOpt = usuarioRepository.findByUsername(loginRequestDTO.getUsername());
@@ -86,12 +91,21 @@ public class AuthServiceImpl implements AuthService {
             .accountLocked(Boolean.TRUE.equals(usuario.getBloqueado()))
             .disabled(!Boolean.TRUE.equals(usuario.getActivo()))
             .build();
-        String token = jwtService.generateToken(userDetails);
+        Map<String, Object> extraClaims = new HashMap<>();
+        extraClaims.put("userId", usuario.getId());
+        extraClaims.put("usuarioId", usuario.getId());
+        extraClaims.put("name", usuario.getUsername());
+        extraClaims.put("fullName", usuario.getUsername());
+        extraClaims.put("email", usuario.getEmail());
+        extraClaims.put("role", normalizedRole);
+
+        String token = jwtService.generateToken(extraClaims, userDetails);
         log.info("Login success for username={}", loginRequestDTO.getUsername());
         return token;
     }
 
     @Override
+    @Transactional(readOnly = true)
     public UserDTO getCurrentUser() {
         String username = SecurityContextHolder.getContext().getAuthentication().getName();
         return usuarioRepository.findByUsername(username)

@@ -78,7 +78,7 @@ export class AuthService {
   // --- LOGIN ---
   login(req: LoginRequestDTO): Observable<LoginResponseDTO> {
     return this.http
-      .post<unknown>(`${this.authUrl}/login`, req)
+      .post(`${this.authUrl}/login`, req, { responseType: 'text' as const })
       .pipe(
         switchMap((raw) => {
           try {

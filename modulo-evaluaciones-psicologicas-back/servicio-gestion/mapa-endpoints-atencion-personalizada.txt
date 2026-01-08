@@ -1,0 +1,256 @@
+MAPA DE ENDPOINTS ATENCION PERSONALIZADA (ACTUALIZADO 2026-01-05)
+================================================================
+
+BASE GENERAL
+- Gateway local: http://127.0.0.1:8080
+- Cabeceras obligatorias en endpoints protegidos: Authorization: Bearer <token>, Content-Type: application/json
+- El id del psicologo se deriva del JWT; no enviar campos psicologo_id salvo que se indique como opcional.
+
+FLUJO COMPLETO
+- Paso 1: Autenticarse y obtener token.
+- Paso 2: Buscar o crear persona (personal militar) por cédula, nombres o apellidos.
+- Paso 3: Crear ficha nueva o retomar una existente (listar/historial).
+- Paso 4: Capturar secciones (datos generales, observación, psicoanamnesis, condición), cada PUT guarda en la BD; los GET devuelven lo guardado para autocompletar.
+- Paso 5: Registrar seguimientos y documentos según corresponda.
+- Paso 6: Consumir POST /finalizar para mostrar resumen consolidado; la ficha queda en estado CERRADA.
+
+0. AUTENTICACION
+- Login: POST http://127.0.0.1:8080/catalogos/api/auth/login
+- JSON solicitud:
+  {
+    "usuario": "psicologo01",
+    "password": "P@ssw0rd"
+  }
+- Respuesta clave: { "token": "<jwt>", "roles": ["ROLE_PSICOLOGO"] }
+- Disponible usuario demo: psicologo01 / P@ssw0rd (ajustar a credenciales reales en produccion).
+
+1. PERSONAL MILITAR (RF012)
+- Buscar por cedula: GET http://127.0.0.1:8080/gestion/api/personal-militar/buscar?cedula=0102030405
+- Buscar por nombres o apellidos (coincidencia parcial): GET http://127.0.0.1:8080/gestion/api/personal-militar/buscar?termino=daniel&page=0&size=10 (también valido ?nombres= ó ?apellidos=)
+- Obtener detalle: GET http://127.0.0.1:8080/gestion/api/personal-militar/{id}
+- Crear: POST http://127.0.0.1:8080/gestion/api/personal-militar
+  {
+    "cedula": "0404040404",
+    "apellidos_nombres": "Luna Viteri Sofia",
+    "tipo_persona": "Aspirante",
+    "grado": "Cadete",
+    "unidad": "Escuela Militar"
+  }
+- Actualizar: PUT http://127.0.0.1:8080/gestion/api/personal-militar/{id}
+  (mismo cuerpo que POST)
+- Respuesta tipica:
+  {
+    "id": 2,
+    "cedula": "0404040404",
+    "apellidosNombres": "Luna Viteri Sofia",
+    "tipoPersona": "Aspirante",
+    "grado": "Cadete",
+    "unidad": "Escuela Militar",
+    "fechaNacimiento": "2006-03-17"
+  }
+
+2. FICHAS PSICOLOGICAS (RF012-RF013)
+- Listar (con filtro automatico por psicologo autenticado salvo rol administrador):
+  GET http://127.0.0.1:8080/gestion/api/fichas-psicologicas?personalMilitarId=2&soloActivas=true
+- Historial por persona: GET http://127.0.0.1:8080/gestion/api/fichas-psicologicas/historial/{personalId}
+- Obtener ficha: GET http://127.0.0.1:8080/gestion/api/fichas-psicologicas/{id}
+- Para un mismo paciente puedes crear varias fichas personalizadas repitiendo el POST mientras cambias fecha/tipo; para otro paciente solo cambia el personal_militar_id.
+- GET por segmentos (usar la respuesta completa de la ficha para autocompletar formularios):
+  • Datos generales: campos personalMilitarId, fechaEvaluacion, tipoEvaluacion, estado.
+  • Observacion clinica: objeto seccionObservacion { observacionClinica, motivoConsulta, enfermedadActual }.
+  • Psicoanamnesis: seccionPrenatal, seccionNatal y seccionInfancia con mismos nombres que el formulario.
+  • Condicion y plan: condicion, diagnosticoCie10Codigo, diagnosticoCie10Descripcion, planFrecuencia, planTipoSesion, planDetalle.
+  Ejemplo de respuesta parcial para GET /gestion/api/fichas-psicologicas/{id}:
+  {
+    "id": 140,
+    "personalMilitarId": 2,
+    "fechaEvaluacion": "2026-01-05",
+    "tipoEvaluacion": "Valoracion porte armas",
+    "estado": "Observacion",
+    "seccionObservacion": {
+      "observacionClinica": "Paciente colaborador",
+      "motivoConsulta": "Solicitud de porte de armas",
+      "enfermedadActual": "Sin novedades relevantes"
+    },
+    "seccionPrenatal": {
+      "condicionesBiologicasPadres": "Sin antecedentes",
+      "condicionesPsicologicasPadres": "Sin diagnosticos",
+      "observacion": "Embarazo a termino"
+    },
+    "seccionNatal": {
+      "partoNormal": true,
+      "termino": "39 semanas",
+      "complicaciones": "Ninguna",
+      "observacion": "Buen Apgar"
+    },
+    "seccionInfancia": {
+      "gradoSociabilidad": "ALTO",
+      "relacionPadresHermanos": "ARMONICA",
+      "discapacidadIntelectual": false,
+      "gradoDiscapacidad": null,
+      "trastornos": "N/A",
+      "tratamientosPsicologicosPsiquiatricos": false,
+      "observacion": "Desarrollo esperado"
+    },
+    "condicion": "Seguimiento",
+    "diagnosticoCie10Codigo": "F41.1",
+    "planFrecuencia": "Mensual"
+  }
+- Crear ficha (solo PSICOLOGO): POST http://127.0.0.1:8080/gestion/api/fichas-psicologicas
+  {
+    "personal_militar_id": 2,
+    "fecha_evaluacion": "2026-01-05",
+    "tipo_evaluacion": "Valoracion porte armas",
+    "estado": "Observacion"
+  }
+- Respuesta (fragmento):
+  {
+    "id": 140,
+    "numeroEvaluacion": "FIC-20260105-AB12CD34EF56",
+    "personalMilitarId": 2,
+    "psicologoId": 1,
+    "estado": "Observacion",
+    "createdAt": "2026-01-05T15:33:21"
+  }
+- Actualizar datos generales: PUT http://127.0.0.1:8080/gestion/api/fichas-psicologicas/{id}/general
+  (mismo JSON que crear; el backend vuelve a validar que el psicologo coincida con el JWT)
+- Guardar observacion clinica: PUT http://127.0.0.1:8080/gestion/api/fichas-psicologicas/{id}/observacion
+  {
+    "observacion_clinica": "Paciente colaborador",
+    "motivo_consulta": "Solicitud de porte de armas",
+    "enfermedad_actual": "Sin novedades relevantes"
+  }
+- Limpiar observacion clinica (deja la seccion vacia para volver a capturar): DELETE http://127.0.0.1:8080/gestion/api/fichas-psicologicas/{id}/observacion
+- Guardar psicoanamnesis: PUT http://127.0.0.1:8080/gestion/api/fichas-psicologicas/{id}/psicoanamnesis
+  {
+    "prenatal": {
+      "condiciones_biologicas_padres": "Sin antecedentes",
+      "condiciones_psicologicas_padres": "Sin diagnosticos",
+      "observacion_prenatal": "Embarazo a termino"
+    },
+    "natal": {
+      "parto_normal": true,
+      "termino_parto": "39 semanas",
+      "complicaciones_parto": "Ninguna",
+      "observacion_natal": "Buen Apgar"
+    },
+    "infancia": {
+      "grado_sociabilidad": "ALTO",
+      "relacion_padres_hermanos": "ARMONICA",
+      "discapacidad_intelectual": false,
+      "grado_discapacidad": null,
+      "trastornos": "N/A",
+      "tratamientos_psicologicos_psiquiatricos": false,
+      "observacion_infancia": "Desarrollo esperado"
+    }
+  }
+- Limpiar psicoanamnesis (reinicia prenatal/natal/infancia para capturar nuevos datos): DELETE http://127.0.0.1:8080/gestion/api/fichas-psicologicas/{id}/psicoanamnesis
+- Actualizar condicion clinica: PUT http://127.0.0.1:8080/gestion/api/fichas-psicologicas/{id}/condicion
+  {
+    "condicion": "Seguimiento",
+    "diagnostico_cie10_codigo": "F41.1",
+    "diagnostico_cie10_descripcion": "Trastorno de ansiedad generalizada",
+    "plan_frecuencia": "Mensual",
+    "plan_tipo_sesion": "Individual",
+    "plan_detalle": "Sesiones presenciales"
+  }
+- Limpiar condicion (restablece la ficha a ALTA y borra diagnostico/plan): DELETE http://127.0.0.1:8080/gestion/api/fichas-psicologicas/{id}/condicion
+- Cambiar estado manualmente: PATCH http://127.0.0.1:8080/gestion/api/fichas-psicologicas/{id}/estado
+  {
+    "estado": "Cerrada"
+  }
+- Finalizar ficha y obtener resumen consolidado (marca estado "Cerrada" si aún no lo está): POST http://127.0.0.1:8080/gestion/api/fichas-psicologicas/{id}/finalizar
+- Flujo recomendado: buscar/crear persona -> crear ficha -> guardar secciones (PUT/DELETE permiten retomar y ver lo guardado via GET) -> cuando se muestra el resumen final invocar POST /finalizar y consumir la respuesta completa (FichaPsicologicaDTO) para la vista de cierre.
+- Nota: cuando la condicion pasa a ALTA el backend limpia diagnostico y plan automaticamente.
+
+3. SEGUIMIENTOS PSICOLOGICOS (RF010-RF013)
+- Listar (filtra por psicologo autenticado salvo rol administrador):
+  GET http://127.0.0.1:8080/gestion/api/seguimientos-psicologicos?fichaPsicologicaId=140
+- Obtener: GET http://127.0.0.1:8080/gestion/api/seguimientos-psicologicos/{id}
+- GET para autocompletar formulario de seguimiento:
+  {
+    "id": 301,
+    "fichaPsicologicaId": 140,
+    "psicologoId": 1,
+    "fechaSeguimiento": "2026-02-10",
+    "observaciones": "Paciente reporta mejoras",
+    "condicionFicha": "Seguimiento",
+    "diagnosticoCie10Codigo": "F41.1",
+    "planFrecuencia": "Mensual",
+    "planTipoSesion": "Individual",
+    "planDetalle": "Refuerzo de tecnicas respiratorias"
+  }
+- Crear: POST http://127.0.0.1:8080/gestion/api/seguimientos-psicologicos
+  {
+    "ficha_psicologica_id": 140,
+    "fecha_seguimiento": "2026-02-10",
+    "observaciones": "Paciente reporta mejoras",
+    "condicion": "Seguimiento",
+    "diagnostico_cie10_codigo": "F41.1",
+    "plan_frecuencia": "Mensual",
+    "plan_tipo_sesion": "Individual",
+    "plan_detalle": "Refuerzo de tecnicas respiratorias"
+  }
+- Actualizar: PUT http://127.0.0.1:8080/gestion/api/seguimientos-psicologicos/{id}
+  {
+    "ficha_psicologica_id": 140,
+    "fecha_seguimiento": "2026-03-15",
+    "observaciones": "Sintomatologia en remision",
+    "condicion": "Alta"
+  }
+- Eliminar: DELETE http://127.0.0.1:8080/gestion/api/seguimientos-psicologicos/{id}
+- Respuesta (fragmento):
+  {
+    "id": 301,
+    "fichaPsicologicaId": 140,
+    "psicologoId": 1,
+    "condicionFicha": "Seguimiento",
+    "fechaSeguimiento": "2026-02-10",
+    "observaciones": "Paciente reporta mejoras"
+  }
+
+4. DOCUMENTOS CLINICOS (RF009-RF013)
+- Listar por ficha: GET http://127.0.0.1:8080/documentos/api/documentos/fichas/{fichaId}/documentos
+- Listar por seguimiento: GET http://127.0.0.1:8080/documentos/api/documentos/seguimientos/{seguimientoId}/documentos
+- Registrar: POST http://127.0.0.1:8080/documentos/api/documentos/documentos
+  {
+    "fichaId": 140,
+    "seguimientoId": 301,
+    "tipoDocumentoId": 2,
+    "nombreArchivo": "consentimiento-informado.pdf",
+    "rutaArchivo": "s3://evaluaciones/140/consentimiento.pdf",
+    "descripcion": "Consentimiento firmado el 2026-01-05"
+  }
+- Cada registro queda vinculado por ids de ficha y seguimiento; se recomienda subir primero a almacenamiento y enviar la ruta resultante.
+
+5. REPORTES (RF014-RF018)
+- Atenciones por psicologo: GET http://127.0.0.1:8080/gestion/api/reportes/atenciones-psicologos?fechaDesde=2026-01-01&fechaHasta=2026-12-31
+- Personal en observacion: GET http://127.0.0.1:8080/gestion/api/reportes/observacion
+- Epidemiologia (resumen global): GET http://127.0.0.1:8080/gestion/api/reportes/epidemiologia?fechaDesde=2026-01-01
+- Historial psicologico consolidado: GET http://127.0.0.1:8080/gestion/api/reportes/historial-psicologico/{personalId}?incluirSeguimientos=true
+- Respuesta ejemplo (historial):
+  {
+    "personalMilitarId": 2,
+    "personalMilitarCedula": "0202020202",
+    "fichas": [
+      {
+        "fichaId": 140,
+        "estadoFicha": "Observacion",
+        "ultimaSesion": "2026-02-10",
+        "seguimientos": [
+          {
+            "id": 301,
+            "fechaSeguimiento": "2026-02-10",
+            "condicionFicha": "Seguimiento",
+            "observaciones": "Paciente reporta mejoras"
+          }
+        ]
+      }
+    ]
+  }
+
+6. NOTAS OPERATIVAS
+- Datos demo cargados al iniciar (variable app.bootstrap.demo-data.enabled=true) crean personal_militar id 1 y 2 para pruebas rapidas.
+- Catalogos (condicion, tipo evaluacion, CIE-10) deben consultarse via servicio de catalogos para evitar valores invalidos.
+- Al enviar condicion "Alta" en fichas o seguimientos, diagnostico y plan se limpian automaticamente.
+- Si se realiza peticion con psicologo_id distinto al del JWT, el backend responde 403 o 404 segun el caso.

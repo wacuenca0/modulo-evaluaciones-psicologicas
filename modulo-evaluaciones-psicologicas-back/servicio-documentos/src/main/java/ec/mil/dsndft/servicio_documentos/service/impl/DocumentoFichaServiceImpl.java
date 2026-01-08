@@ -36,6 +36,15 @@ public class DocumentoFichaServiceImpl implements DocumentoFichaService {
 
     @Override
     @Transactional(readOnly = true)
+    public List<DocumentoFichaDTO> findActivosBySeguimiento(Long seguimientoId) {
+        return documentoFichaRepository.findBySeguimientoIdAndActivoTrue(seguimientoId)
+                .stream()
+                .map(documentoFichaMapper::toDTO)
+                .toList();
+    }
+
+    @Override
+    @Transactional(readOnly = true)
     public DocumentoFichaDTO findById(Long id) {
         return documentoFichaMapper.toDTO(getDocumentoFicha(id));
     }
@@ -68,6 +77,7 @@ public class DocumentoFichaServiceImpl implements DocumentoFichaService {
         entity.setDescripcion(dto.getDescripcion());
         entity.setFechaSubida(dto.getFechaSubida());
         entity.setTamano(dto.getTamano());
+        entity.setSeguimientoId(dto.getSeguimientoId());
         if (dto.getActivo() != null) {
             entity.setActivo(dto.getActivo());
         }

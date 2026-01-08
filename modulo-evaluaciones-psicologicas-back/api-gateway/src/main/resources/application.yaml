@@ -55,7 +55,7 @@ management:
 
 security:
   jwt:
-    secret: change-me-to-a-real-secret-key-please-32-bytes
+    secret: ${JWT_SECRET:cambia-esta-clave-super-segura-de-32+caracteres-2025}
     issuer: modulo-evaluaciones-psicologicas
     audience: frontend-clients
     authorities-claim: roles

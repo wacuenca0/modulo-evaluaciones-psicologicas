@@ -40,28 +40,17 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
         try {
             var claims = jwtService.extractAllClaims(token);
             String username = claims.getSubject();
-            @SuppressWarnings("unchecked")
-            List<String> roles = (List<String>) claims.get("roles");
-            List<SimpleGrantedAuthority> authorities;
-            if (roles != null && !roles.isEmpty()) {
-                authorities = roles.stream()
+            log.info("JWT claims para {}: {}", username, claims);
+                List<String> roles = (List<String>) claims.get("roles");
+                List<SimpleGrantedAuthority> authorities = roles != null && !roles.isEmpty() ? roles.stream()
                         .map(r -> r == null ? "" : r.trim())
                         .filter(r -> !r.isEmpty())
-                        .map(r -> {
-                            String u = r.toUpperCase();
-                            if (u.equals("ADMINISTRADOR") || u.equals("ROLE_ADMINISTRADOR") || u.equals("ADMIN")) {
-                                return new SimpleGrantedAuthority("ADMINISTRADOR");
-                            }
-                            return new SimpleGrantedAuthority(u);
-                        })
-                        .toList();
-            } else {
-                authorities = List.of();
-            }
+                        .map(this::toAuthority)
+                        .toList() : List.of();
 
             // Fallback temporal: si no hay roles en el token y el usuario es 'admin', asumir ADMINISTRADOR
             if ((roles == null || roles.isEmpty()) && "admin".equalsIgnoreCase(username)) {
-                authorities = List.of(new SimpleGrantedAuthority("ADMINISTRADOR"));
+                authorities = List.of(toAuthority("ADMINISTRADOR"));
                 log.warn("Aplicando fallback de ADMINISTRADOR para usuario 'admin' por token sin roles.");
             }
 
@@ -71,7 +60,11 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                 log.info("JWT roles leídos para {}: {}", username, roles);
             }
 
-                    Authentication authToken = new UsernamePasswordAuthenticationToken(username, null, authorities);
+                Long userId = extractLong(claims, "userId", "usuarioId", "id", "uid");
+                String displayName = extractString(claims, "name", "nombre", "fullName", "full_name", "apellidosNombres");
+
+                JwtAuthenticatedUser principal = new JwtAuthenticatedUser(userId, username, displayName, authorities);
+                Authentication authToken = new UsernamePasswordAuthenticationToken(principal, null, authorities);
                 ((UsernamePasswordAuthenticationToken) authToken).setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
                 SecurityContextHolder.getContext().setAuthentication(authToken);
         } catch (Exception e) {
@@ -81,4 +74,51 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
         }
         filterChain.doFilter(request, response);
     }
+
+        private SimpleGrantedAuthority toAuthority(String rawRole) {
+            if (rawRole == null) {
+                return new SimpleGrantedAuthority("ROLE_USER");
+            }
+            String normalized = rawRole.trim();
+            if (normalized.isEmpty()) {
+                return new SimpleGrantedAuthority("ROLE_USER");
+            }
+            String upper = normalized.toUpperCase();
+            if (upper.equals("ADMIN") || upper.equals("ADMINISTRADOR")) {
+                upper = "ROLE_ADMINISTRADOR";
+            } else if (!upper.startsWith("ROLE_")) {
+                upper = "ROLE_" + upper;
+            }
+            return new SimpleGrantedAuthority(upper);
+        }
+
+        private Long extractLong(io.jsonwebtoken.Claims claims, String... keys) {
+            for (String key : keys) {
+                if (claims.containsKey(key)) {
+                    Object value = claims.get(key);
+                    if (value instanceof Number number) {
+                        return number.longValue();
+                    }
+                    if (value instanceof String text) {
+                        try {
+                            return Long.parseLong(text.trim());
+                        } catch (NumberFormatException ignored) {
+                        }
+                    }
+                }
+            }
+            return null;
+        }
+
+        private String extractString(io.jsonwebtoken.Claims claims, String... keys) {
+            for (String key : keys) {
+                if (claims.containsKey(key)) {
+                    Object value = claims.get(key);
+                    if (value instanceof String text && !text.isBlank()) {
+                        return text.trim();
+                    }
+                }
+            }
+            return null;
+        }
 }

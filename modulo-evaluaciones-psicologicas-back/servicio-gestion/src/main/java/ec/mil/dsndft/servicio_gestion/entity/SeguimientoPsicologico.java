@@ -3,6 +3,7 @@ package ec.mil.dsndft.servicio_gestion.entity;
 import jakarta.persistence.*;
 import lombok.*;
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 
 @Data
 @NoArgsConstructor
@@ -22,7 +23,7 @@ public class SeguimientoPsicologico {
     private FichaPsicologica fichaPsicologica;
 
     @ManyToOne(optional = false)
-    @JoinColumn(name = "psicologo_id", nullable = false)
+    @JoinColumn(name = "psicologo_id", nullable = false, foreignKey = @ForeignKey(value = ConstraintMode.NO_CONSTRAINT))
     private Psicologo psicologo;
 
     @Column(nullable = false)
@@ -31,5 +32,30 @@ public class SeguimientoPsicologico {
     @Column(columnDefinition = "CLOB")
     private String observaciones;
 
-    // Getters and setters
+    @Builder.Default
+    @Column(name = "created_at", nullable = false, updatable = false)
+    private LocalDateTime createdAt = LocalDateTime.now();
+
+    @Builder.Default
+    @Column(name = "updated_at", nullable = false)
+    private LocalDateTime updatedAt = LocalDateTime.now();
+
+    @PrePersist
+    void onCreate() {
+        LocalDateTime now = LocalDateTime.now();
+        if (createdAt == null) {
+            createdAt = now;
+        }
+        if (updatedAt == null) {
+            updatedAt = now;
+        }
+        if (fechaSeguimiento == null) {
+            fechaSeguimiento = LocalDate.now();
+        }
+    }
+
+    @PreUpdate
+    void onUpdate() {
+        updatedAt = LocalDateTime.now();
+    }
 }

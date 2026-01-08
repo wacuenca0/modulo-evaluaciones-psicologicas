@@ -7,6 +7,7 @@ public class DocumentoFichaDTO {
     private Long id;
     private Long fichaId;
     private Long tipoDocumentoId;
+    private Long seguimientoId;
     private String nombreArchivo;
     private String rutaArchivo;
     private String descripcion;
@@ -21,6 +22,8 @@ public class DocumentoFichaDTO {
     public void setFichaId(Long fichaId) { this.fichaId = fichaId; }
     public Long getTipoDocumentoId() { return tipoDocumentoId; }
     public void setTipoDocumentoId(Long tipoDocumentoId) { this.tipoDocumentoId = tipoDocumentoId; }
+    public Long getSeguimientoId() { return seguimientoId; }
+    public void setSeguimientoId(Long seguimientoId) { this.seguimientoId = seguimientoId; }
     public String getNombreArchivo() { return nombreArchivo; }
     public void setNombreArchivo(String nombreArchivo) { this.nombreArchivo = nombreArchivo; }
     public String getRutaArchivo() { return rutaArchivo; }

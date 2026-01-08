@@ -1,79 +1,83 @@
 import { inject, Injectable } from '@angular/core';
 import { HttpClient, HttpParams } from '@angular/common/http';
-import { Observable, catchError, map, of } from 'rxjs';
+import { Observable } from 'rxjs';
 import { environment } from '../../environments/environment';
-import { PageResponse } from '../models/pagination.models';
-import { PersonalMilitarDTO, PersonalMilitarFilter, PersonalMilitarPayload } from '../models/personal-militar.models';
+import { PersonalMilitarDTO, PersonalMilitarPageDTO, PersonalMilitarPayload } from '../models/personal-militar.models';
 
 @Injectable({ providedIn: 'root' })
 export class PersonalMilitarService {
   private readonly http = inject(HttpClient);
-  private readonly baseUrl = `${environment.gestionBaseUrl}/personal-militar`;
+  private readonly baseUrl = this.resolveBaseUrl();
 
-  list(filter: PersonalMilitarFilter): Observable<PageResponse<PersonalMilitarDTO>> {
-    const params = this.buildParams(filter);
-    return this.http
-      .get<PageResponse<PersonalMilitarDTO> | PersonalMilitarDTO[]>(this.baseUrl, { params })
-      .pipe(
-        map((payload) => this.toPageResponse(payload, filter)),
-        catchError(() => of(this.emptyPage(filter)))
-      );
+  buscarPorCedula(cedula: string): Observable<PersonalMilitarDTO> {
+    const params = new HttpParams().set('cedula', cedula.trim());
+    return this.http.get<PersonalMilitarDTO>(`${this.baseUrl}/buscar`, { params });
   }
 
-  findById(id: string): Observable<PersonalMilitarDTO> {
+  buscarPorApellidos(apellidos: string, page = 0, size = 10): Observable<PersonalMilitarPageDTO> {
+    const params = new HttpParams()
+      .set('apellidos', apellidos.trim())
+      .set('page', String(page))
+      .set('size', String(size));
+    return this.http.get<PersonalMilitarPageDTO>(`${this.baseUrl}/buscar`, { params });
+  }
+
+  obtenerPorId(id: number): Observable<PersonalMilitarDTO> {
     return this.http.get<PersonalMilitarDTO>(`${this.baseUrl}/${id}`);
   }
 
-  create(payload: PersonalMilitarPayload): Observable<PersonalMilitarDTO> {
-    return this.http.post<PersonalMilitarDTO>(this.baseUrl, payload);
+  crear(payload: PersonalMilitarPayload): Observable<PersonalMilitarDTO> {
+    return this.http.post<PersonalMilitarDTO>(this.baseUrl, this.toApiPayload(payload));
   }
 
-  update(id: string, payload: PersonalMilitarPayload): Observable<PersonalMilitarDTO> {
-    return this.http.put<PersonalMilitarDTO>(`${this.baseUrl}/${id}`, payload);
+  actualizar(id: number, payload: PersonalMilitarPayload): Observable<PersonalMilitarDTO> {
+    return this.http.put<PersonalMilitarDTO>(`${this.baseUrl}/${id}`, this.toApiPayload(payload));
   }
 
-  updateEstado(id: string, estado: 'ACTIVO' | 'INACTIVO'): Observable<void> {
-    return this.http.patch<void>(`${this.baseUrl}/${id}/estado`, { estado });
+  eliminar(id: number): Observable<void> {
+    return this.http.delete<void>(`${this.baseUrl}/${id}`);
   }
 
-  private buildParams(filter: PersonalMilitarFilter): HttpParams {
-    let params = new HttpParams();
-    for (const [key, value] of Object.entries(filter)) {
-      if (value === undefined || value === null || value === '') continue;
-      params = params.set(key, String(value));
+  private resolveBaseUrl(): string {
+    const nested = (environment as { api?: { gestionBaseUrl?: string } }).api?.gestionBaseUrl;
+    const flat = (environment as { gestionBaseUrl?: string }).gestionBaseUrl;
+    const base = nested || flat || '';
+    if (!base) {
+      return '/gestion/api/personal-militar';
     }
-    return params;
-  }
-
-  private emptyPage(filter: PersonalMilitarFilter): PageResponse<PersonalMilitarDTO> {
-    return {
-      content: [],
-      totalElements: 0,
-      totalPages: 0,
-      page: filter.page ?? 0,
-      size: filter.size ?? 0
-    };
-  }
-
-  private toPageResponse(
-    payload: PageResponse<PersonalMilitarDTO> | PersonalMilitarDTO[],
-    filter: PersonalMilitarFilter
-  ): PageResponse<PersonalMilitarDTO> {
-    if (!Array.isArray(payload)) {
-      return payload;
+    const normalized = base.replace(/\/$/, '');
+    if (/\/personal-militar$/i.test(normalized)) {
+      return normalized;
     }
+    return `${normalized}/personal-militar`;
+  }
 
-    const totalElements = payload.length;
-    const requestedSize = typeof filter.size === 'number' && filter.size > 0 ? filter.size : undefined;
-    const size = requestedSize ?? (totalElements > 0 ? totalElements : 1);
-    const totalPages = totalElements === 0 ? 0 : Math.ceil(totalElements / size);
-
+  private toApiPayload(payload: PersonalMilitarPayload): Record<string, unknown> {
     return {
-      content: payload,
-      totalElements,
-      totalPages,
-      page: filter.page ?? 0,
-      size
+      cedula: payload.cedula,
+      apellidos_nombres: payload.apellidosNombres,
+      tipo_persona: payload.tipoPersona,
+      es_militar: payload.esMilitar,
+      fecha_nacimiento: payload.fechaNacimiento ?? null,
+      edad: payload.edad ?? null,
+      sexo: payload.sexo,
+      etnia: payload.etnia ?? null,
+      estado_civil: payload.estadoCivil ?? null,
+      numero_hijos: payload.numeroHijos ?? null,
+      ocupacion: payload.ocupacion ?? null,
+      servicio_activo: payload.servicioActivo,
+      servicio_pasivo: payload.servicioPasivo,
+      seguro: payload.seguro ?? null,
+      grado: payload.grado ?? null,
+      especialidad: payload.especialidad ?? null,
+      provincia: payload.provincia ?? null,
+      canton: payload.canton ?? null,
+      parroquia: payload.parroquia ?? null,
+      barrio_sector: payload.barrioSector ?? null,
+      telefono: payload.telefono ?? null,
+      celular: payload.celular ?? null,
+      email: payload.email ?? null,
+      activo: payload.activo
     };
   }
 }

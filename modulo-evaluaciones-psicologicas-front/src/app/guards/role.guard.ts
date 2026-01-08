@@ -8,6 +8,11 @@ export const RoleGuard: CanActivateFn = (route: ActivatedRouteSnapshot) => {
   const allowed: string[] = route.data['roles'] || [];
   if (!allowed || allowed.length === 0) return true;
   if (auth.hasAnyRole(allowed)) return true;
-  router.navigate(['/']);
+  const fallback = auth.hasRole('ROLE_PSICOLOGO')
+    ? '/psicologo/personal'
+    : auth.hasRole('ROLE_ADMINISTRADOR')
+      ? '/admin/catalogos'
+      : '/login';
+  router.navigate([fallback]).catch(() => {});
   return false;
 };
