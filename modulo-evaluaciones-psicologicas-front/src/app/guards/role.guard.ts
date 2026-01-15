@@ -1,18 +1,31 @@
 import { inject } from '@angular/core';
-import { CanActivateFn, Router, ActivatedRouteSnapshot } from '@angular/router';
+import { CanActivateFn, CanMatchFn, Route, Router, UrlSegment, UrlTree, ActivatedRouteSnapshot } from '@angular/router';
 import { AuthService } from '../services/auth.service';
 
 export const RoleGuard: CanActivateFn = (route: ActivatedRouteSnapshot) => {
   const auth = inject(AuthService);
   const router = inject(Router);
-  const allowed: string[] = route.data['roles'] || [];
-  if (!allowed || allowed.length === 0) return true;
-  if (auth.hasAnyRole(allowed)) return true;
+  return evaluateRoles(route.data?.['roles'], auth, router);
+};
+
+export const RoleMatchGuard: CanMatchFn = (route: Route, _segments: UrlSegment[]) => {
+  const auth = inject(AuthService);
+  const router = inject(Router);
+  return evaluateRoles(route.data?.['roles'], auth, router);
+};
+
+function evaluateRoles(roles: unknown, auth: AuthService, router: Router): boolean | UrlTree {
+  const allowed = Array.isArray(roles) ? roles as string[] : [];
+  if (!allowed.length) {
+    return true;
+  }
+  if (auth.hasAnyRole(allowed)) {
+    return true;
+  }
   const fallback = auth.hasRole('ROLE_PSICOLOGO')
     ? '/psicologo/personal'
     : auth.hasRole('ROLE_ADMINISTRADOR')
       ? '/admin/catalogos'
       : '/login';
-  router.navigate([fallback]).catch(() => {});
-  return false;
-};
+  return router.parseUrl(fallback);
+}

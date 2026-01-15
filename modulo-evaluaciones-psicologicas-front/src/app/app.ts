@@ -8,7 +8,9 @@ import { AppNavComponent } from './general/nav/app-nav.component';
   selector: 'app-root',
   imports: [RouterOutlet, CommonModule, AppNavComponent],
   template: `
-    <app-nav></app-nav>
+    @if (!isLoginRoute) {
+      <app-nav></app-nav>
+    }
     <main class="p-4">
       <router-outlet></router-outlet>
     </main>

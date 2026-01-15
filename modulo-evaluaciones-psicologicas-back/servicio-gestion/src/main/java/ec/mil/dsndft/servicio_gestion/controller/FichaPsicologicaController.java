@@ -81,6 +81,13 @@ public class FichaPsicologicaController {
     }
 
     @PreAuthorize("hasRole('PSICOLOGO')")
+    @GetMapping("/numero-preview")
+    public ResponseEntity<Map<String, String>> generarNumeroPreview() {
+        String numero = fichaPsicologicaService.generarNumeroEvaluacionPreview();
+        return ResponseEntity.ok(Map.of("numeroEvaluacion", numero));
+    }
+
+    @PreAuthorize("hasRole('PSICOLOGO')")
     @PutMapping("/{id}/general")
     public ResponseEntity<FichaPsicologicaDTO> actualizarDatosGenerales(@PathVariable Long id,
                                                                         @Valid @RequestBody FichaDatosGeneralesRequestDTO request) {

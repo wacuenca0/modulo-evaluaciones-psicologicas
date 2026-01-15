@@ -6,97 +6,204 @@
 -- Crear tablespace (opcional, ajusta según tu configuración)
 CREATE TABLESPACE ts_psicologico_militar
 DATAFILE 'ts_psicologico_militar.dbf'
-SIZE 500M AUTOEXTEND ON NEXT 100M MAXSIZE UNLIMITED;
+-- =============================================
+-- SISTEMA HISTORIAL PSICOLOGICO MILITAR
+-- Script inicial de base de datos para Oracle
+-- =============================================
 
--- Crear usuario
-CREATE USER user_hc IDENTIFIED BY "tu_password_here"
-DEFAULT TABLESPACE ts_psicologico_militar
-QUOTA UNLIMITED ON ts_psicologico_militar;
+-- Ajusta (o elimina) la seccion de tablespace y usuario segun tu instancia.
+-- Las tablas y secuencias definidas aqui siguen exactamente el modelo usado
+-- por los microservicios modulo-evaluaciones-psicologicas (enero 2026).
 
--- Conceder privilegios
-GRANT CONNECT, RESOURCE TO user_hc;
-GRANT CREATE VIEW TO user_hc;
+-- =============================================
+-- TABLESPACE Y USUARIO (OPCIONAL)
+-- =============================================
 
--- Conectar con el usuario creado
+-- CREATE TABLESPACE ts_psicologico_militar
+-- DATAFILE 'ts_psicologico_militar.dbf'
+-- SIZE 500M AUTOEXTEND ON NEXT 100M MAXSIZE UNLIMITED;
+
+-- CREATE USER user_hc IDENTIFIED BY "tu_password_here"
+-- DEFAULT TABLESPACE ts_psicologico_militar
+-- QUOTA UNLIMITED ON ts_psicologico_militar;
+
+-- GRANT CONNECT, RESOURCE, CREATE VIEW TO user_hc;
+
 -- CONNECT user_hc/tu_password_here@localhost:1521/xepdb1
 
+SET DEFINE OFF;
+SET ECHO ON;
+
 -- =============================================
--- TABLAS MAESTRAS Y CATÁLOGOS
+-- LIMPIEZA OPCIONAL DE OBJETOS (IGNORA ERRORES SI YA EXISTEN)
 -- =============================================
 
--- Catálogo de enfermedades CIE-10 (RF002)
+BEGIN
+    EXECUTE IMMEDIATE 'DROP TABLE documentos_digitales CASCADE CONSTRAINTS';
+EXCEPTION WHEN OTHERS THEN IF SQLCODE != -942 THEN RAISE; END IF; END;
+/
+BEGIN
+    EXECUTE IMMEDIATE 'DROP TABLE tipos_documento CASCADE CONSTRAINTS';
+EXCEPTION WHEN OTHERS THEN IF SQLCODE != -942 THEN RAISE; END IF; END;
+/
+BEGIN
+    EXECUTE IMMEDIATE 'DROP TABLE password_change_requests CASCADE CONSTRAINTS';
+EXCEPTION WHEN OTHERS THEN IF SQLCODE != -942 THEN RAISE; END IF; END;
+/
+BEGIN
+    EXECUTE IMMEDIATE 'DROP TABLE usuarios CASCADE CONSTRAINTS';
+EXCEPTION WHEN OTHERS THEN IF SQLCODE != -942 THEN RAISE; END IF; END;
+/
+BEGIN
+    EXECUTE IMMEDIATE 'DROP TABLE roles CASCADE CONSTRAINTS';
+EXCEPTION WHEN OTHERS THEN IF SQLCODE != -942 THEN RAISE; END IF; END;
+/
+BEGIN
+    EXECUTE IMMEDIATE 'DROP TABLE seguimientos_psicologicos CASCADE CONSTRAINTS';
+EXCEPTION WHEN OTHERS THEN IF SQLCODE != -942 THEN RAISE; END IF; END;
+/
+BEGIN
+    EXECUTE IMMEDIATE 'DROP TABLE fichas_psicologicas CASCADE CONSTRAINTS';
+EXCEPTION WHEN OTHERS THEN IF SQLCODE != -942 THEN RAISE; END IF; END;
+/
+BEGIN
+    EXECUTE IMMEDIATE 'DROP TABLE psicologos CASCADE CONSTRAINTS';
+EXCEPTION WHEN OTHERS THEN IF SQLCODE != -942 THEN RAISE; END IF; END;
+/
+BEGIN
+    EXECUTE IMMEDIATE 'DROP TABLE personal_militar CASCADE CONSTRAINTS';
+EXCEPTION WHEN OTHERS THEN IF SQLCODE != -942 THEN RAISE; END IF; END;
+/
+BEGIN
+    EXECUTE IMMEDIATE 'DROP TABLE catalogo_condiciones CASCADE CONSTRAINTS';
+EXCEPTION WHEN OTHERS THEN IF SQLCODE != -942 THEN RAISE; END IF; END;
+/
+BEGIN
+    EXECUTE IMMEDIATE 'DROP TABLE catalogo_cie10 CASCADE CONSTRAINTS';
+EXCEPTION WHEN OTHERS THEN IF SQLCODE != -942 THEN RAISE; END IF; END;
+/
+BEGIN
+    EXECUTE IMMEDIATE 'DROP TABLE fichas_historicas CASCADE CONSTRAINTS';
+EXCEPTION WHEN OTHERS THEN IF SQLCODE != -942 THEN RAISE; END IF; END;
+/
+
+BEGIN
+    EXECUTE IMMEDIATE 'DROP SEQUENCE seq_documentos_digitales';
+EXCEPTION WHEN OTHERS THEN IF SQLCODE != -2289 THEN RAISE; END IF; END;
+/
+BEGIN
+    EXECUTE IMMEDIATE 'DROP SEQUENCE seq_tipos_documento';
+EXCEPTION WHEN OTHERS THEN IF SQLCODE != -2289 THEN RAISE; END IF; END;
+/
+BEGIN
+    EXECUTE IMMEDIATE 'DROP SEQUENCE seq_password_change_requests';
+EXCEPTION WHEN OTHERS THEN IF SQLCODE != -2289 THEN RAISE; END IF; END;
+/
+BEGIN
+    EXECUTE IMMEDIATE 'DROP SEQUENCE seq_usuarios';
+EXCEPTION WHEN OTHERS THEN IF SQLCODE != -2289 THEN RAISE; END IF; END;
+/
+BEGIN
+    EXECUTE IMMEDIATE 'DROP SEQUENCE seq_roles';
+EXCEPTION WHEN OTHERS THEN IF SQLCODE != -2289 THEN RAISE; END IF; END;
+/
+BEGIN
+    EXECUTE IMMEDIATE 'DROP SEQUENCE seq_seguimientos_psicologicos';
+EXCEPTION WHEN OTHERS THEN IF SQLCODE != -2289 THEN RAISE; END IF; END;
+/
+BEGIN
+    EXECUTE IMMEDIATE 'DROP SEQUENCE seq_fichas_psicologicas';
+EXCEPTION WHEN OTHERS THEN IF SQLCODE != -2289 THEN RAISE; END IF; END;
+/
+BEGIN
+    EXECUTE IMMEDIATE 'DROP SEQUENCE seq_psicologos';
+EXCEPTION WHEN OTHERS THEN IF SQLCODE != -2289 THEN RAISE; END IF; END;
+/
+BEGIN
+    EXECUTE IMMEDIATE 'DROP SEQUENCE seq_personal_militar';
+EXCEPTION WHEN OTHERS THEN IF SQLCODE != -2289 THEN RAISE; END IF; END;
+/
+BEGIN
+    EXECUTE IMMEDIATE 'DROP SEQUENCE seq_catalogo_condiciones';
+EXCEPTION WHEN OTHERS THEN IF SQLCODE != -2289 THEN RAISE; END IF; END;
+/
+BEGIN
+    EXECUTE IMMEDIATE 'DROP SEQUENCE seq_catalogo_cie10';
+EXCEPTION WHEN OTHERS THEN IF SQLCODE != -2289 THEN RAISE; END IF; END;
+/
+BEGIN
+    EXECUTE IMMEDIATE 'DROP SEQUENCE seq_fichas_historicas';
+EXCEPTION WHEN OTHERS THEN IF SQLCODE != -2289 THEN RAISE; END IF; END;
+/
+
+
+CREATE SEQUENCE seq_catalogo_cie10 START WITH 1 INCREMENT BY 1 NOCACHE;
+
 CREATE TABLE catalogo_cie10 (
-    id NUMBER PRIMARY KEY,
-    codigo VARCHAR2(10) NOT NULL UNIQUE,
-    descripcion CLOB NOT NULL,
-    activo NUMBER(1) DEFAULT 1,
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    id          NUMBER(19, 0)      NOT NULL,
+    codigo      VARCHAR2(10 CHAR)  NOT NULL,
+    descripcion CLOB               NOT NULL,
+    activo      NUMBER(1, 0)       DEFAULT 1 NOT NULL,
+    created_at  TIMESTAMP(6)       DEFAULT CURRENT_TIMESTAMP NOT NULL,
+    updated_at  TIMESTAMP(6)       DEFAULT CURRENT_TIMESTAMP NOT NULL,
+    CONSTRAINT pk_catalogo_cie10 PRIMARY KEY (id),
+    CONSTRAINT uk_catalogo_cie10_codigo UNIQUE (codigo),
+    CONSTRAINT ck_catalogo_cie10_activo CHECK (activo IN (0, 1))
 );
 
--- Secuencia para catalogo_cie10
-CREATE SEQUENCE seq_catalogo_cie10 START WITH 1 INCREMENT BY 1;
-
--- Catálogo de condiciones del paciente (RF007, RF010)
-CREATE TABLE catalogo_condiciones (
-    id NUMBER PRIMARY KEY,
-    nombre VARCHAR2(50) NOT NULL UNIQUE,
-    descripcion CLOB,
-    color_indicador VARCHAR2(7) DEFAULT '#000000'
-);
-
--- Secuencia para catalogo_condiciones
-CREATE SEQUENCE seq_catalogo_condiciones START WITH 1 INCREMENT BY 1;
-
--- Catálogo de tipos de documento (RF009)
-CREATE TABLE tipos_documento (
-    id NUMBER PRIMARY KEY,
-    nombre VARCHAR2(100) NOT NULL UNIQUE,
-    descripcion CLOB,
-    obligatorio NUMBER(1) DEFAULT 0
-);
-
--- Secuencia para tipos_documento
-CREATE SEQUENCE seq_tipos_documento START WITH 1 INCREMENT BY 1;
+CREATE OR REPLACE TRIGGER tr_catalogo_cie10_audit
+BEFORE INSERT OR UPDATE ON catalogo_cie10
+FOR EACH ROW
+BEGIN
+    IF INSERTING THEN
+        IF :NEW.created_at IS NULL THEN
+            :NEW.created_at := CURRENT_TIMESTAMP;
+        END IF;
+    END IF;
+    :NEW.updated_at := CURRENT_TIMESTAMP;
+END;
+/
 
 -- =============================================
--- SISTEMA DE USUARIOS Y ROLES
+-- USUARIOS Y ROLES (SERVICIO CATALOGOS)
 -- =============================================
 
--- Tabla de roles del sistema
+CREATE SEQUENCE seq_roles START WITH 1 INCREMENT BY 1 NOCACHE;
+
 CREATE TABLE roles (
-    id NUMBER PRIMARY KEY,
-    nombre VARCHAR2(50) NOT NULL UNIQUE,
-    descripcion CLOB,
-    nivel_permisos NUMBER DEFAULT 1,
-    activo NUMBER(1) DEFAULT 1,
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    id             NUMBER(19, 0)      NOT NULL,
+    nombre         VARCHAR2(50 CHAR)  NOT NULL,
+    descripcion    VARCHAR2(255 CHAR),
+    nivel_permisos NUMBER(3, 0)       DEFAULT 1 NOT NULL,
+    activo         NUMBER(1, 0)       DEFAULT 1 NOT NULL,
+    created_at     TIMESTAMP(6)       DEFAULT CURRENT_TIMESTAMP NOT NULL,
+    CONSTRAINT pk_roles PRIMARY KEY (id),
+    CONSTRAINT uk_roles_nombre UNIQUE (nombre),
+    CONSTRAINT ck_roles_activo CHECK (activo IN (0, 1))
 );
 
--- Secuencia para roles
-CREATE SEQUENCE seq_roles START WITH 1 INCREMENT BY 1;
+CREATE SEQUENCE seq_usuarios START WITH 1 INCREMENT BY 1 NOCACHE;
 
--- Tabla de usuarios del sistema
 CREATE TABLE usuarios (
-    id NUMBER PRIMARY KEY,
-    username VARCHAR2(50) UNIQUE NOT NULL,
-    password_hash VARCHAR2(255) NOT NULL,
-    email VARCHAR2(100),
-    rol_id NUMBER NOT NULL,
-    activo NUMBER(1) DEFAULT 1,
-    fecha_ultimo_login TIMESTAMP,
-    intentos_login NUMBER DEFAULT 0,
-    bloqueado NUMBER(1) DEFAULT 0,
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    
-    CONSTRAINT fk_usuarios_rol FOREIGN KEY (rol_id) REFERENCES roles(id)
+    id               NUMBER(19, 0)      NOT NULL,
+    username         VARCHAR2(50 CHAR)  NOT NULL,
+    password_hash    VARCHAR2(255 CHAR) NOT NULL,
+    email            VARCHAR2(100 CHAR),
+    rol_id           NUMBER(19, 0),
+    activo           NUMBER(1, 0)       DEFAULT 1 NOT NULL,
+    fecha_ultimo_login TIMESTAMP(6),
+    intentos_login   NUMBER(4, 0)       DEFAULT 0 NOT NULL,
+    bloqueado        NUMBER(1, 0)       DEFAULT 0 NOT NULL,
+    created_at       TIMESTAMP(6)       DEFAULT CURRENT_TIMESTAMP NOT NULL,
+    updated_at       TIMESTAMP(6)       DEFAULT CURRENT_TIMESTAMP NOT NULL,
+    CONSTRAINT pk_usuarios PRIMARY KEY (id),
+    CONSTRAINT uk_usuarios_username UNIQUE (username),
+    CONSTRAINT ck_usuarios_activo CHECK (activo IN (0, 1)),
+    CONSTRAINT ck_usuarios_bloqueado CHECK (bloqueado IN (0, 1)),
+    CONSTRAINT fk_usuarios_roles FOREIGN KEY (rol_id) REFERENCES roles (id)
 );
 
--- Secuencia para usuarios
-CREATE SEQUENCE seq_usuarios START WITH 1 INCREMENT BY 1;
-
--- Trigger para updated_at
-CREATE OR REPLACE TRIGGER tr_usuarios_updated
+CREATE OR REPLACE TRIGGER tr_usuarios_audit
 BEFORE UPDATE ON usuarios
 FOR EACH ROW
 BEGIN
@@ -104,46 +211,72 @@ BEGIN
 END;
 /
 
--- =============================================
--- TABLAS PRINCIPALES DEL SISTEMA
--- =============================================
+CREATE SEQUENCE seq_password_change_requests START WITH 1 INCREMENT BY 1 NOCACHE;
 
--- Tabla de personal militar (RF005, RF011, RF012, RF014)
-CREATE TABLE personal_militar (
-    id NUMBER PRIMARY KEY,
-    cedula VARCHAR2(20) UNIQUE NOT NULL,
-    apellidos_nombres VARCHAR2(200) NOT NULL,
-    tipo_persona VARCHAR2(20) NOT NULL,
-    es_militar NUMBER(1) DEFAULT 0 NOT NULL,
-    fecha_nacimiento DATE,
-    edad NUMBER,
-    sexo VARCHAR2(10) CHECK (sexo IN ('Hombre', 'Mujer', 'Otro')),
-    etnia VARCHAR2(50),
-    estado_civil VARCHAR2(50),
-    nro_hijos NUMBER DEFAULT 0,
-    ocupacion VARCHAR2(100),
-    servicio_activo NUMBER(1) DEFAULT 1 NOT NULL,
-    servicio_pasivo NUMBER(1) DEFAULT 0 NOT NULL,
-    seguro VARCHAR2(100),
-    grado VARCHAR2(50),
-    especialidad VARCHAR2(100),
-    provincia VARCHAR2(100),
-    canton VARCHAR2(100),
-    parroquia VARCHAR2(100),
-    barrio_sector VARCHAR2(100),
-    telefono VARCHAR2(20),
-    celular VARCHAR2(20),
-    email VARCHAR2(100),
-    activo NUMBER(1) DEFAULT 1,
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+CREATE TABLE password_change_requests (
+    id               NUMBER(19, 0)      NOT NULL,
+    usuario_id       NUMBER(19, 0)      NOT NULL,
+    username_snapshot VARCHAR2(50 CHAR) NOT NULL,
+    contact_email    VARCHAR2(150 CHAR),
+    motivo           VARCHAR2(500 CHAR),
+    status           VARCHAR2(20 CHAR)  NOT NULL,
+    requested_at     TIMESTAMP(6)       DEFAULT CURRENT_TIMESTAMP NOT NULL,
+    processed_at     TIMESTAMP(6),
+    processed_by     VARCHAR2(50 CHAR),
+    admin_notes      VARCHAR2(500 CHAR),
+    unlock_account   NUMBER(1, 0),
+    CONSTRAINT pk_password_change_requests PRIMARY KEY (id),
+    CONSTRAINT ck_password_change_status CHECK (status IN ('PENDIENTE','COMPLETADO','RECHAZADO')),
+    CONSTRAINT ck_password_change_unlock CHECK (unlock_account IN (0, 1) OR unlock_account IS NULL)
 );
 
--- Secuencia para personal_militar
-CREATE SEQUENCE seq_personal_militar START WITH 1 INCREMENT BY 1;
+ALTER TABLE password_change_requests
+    ADD CONSTRAINT fk_password_change_usuario FOREIGN KEY (usuario_id)
+        REFERENCES usuarios (id);
 
--- Trigger para updated_at
-CREATE OR REPLACE TRIGGER tr_personal_militar_updated
+CREATE INDEX idx_password_change_status ON password_change_requests (status, requested_at);
+
+-- =============================================
+-- ENTIDADES DEL SERVICIO GESTION
+-- =============================================
+
+CREATE SEQUENCE seq_personal_militar START WITH 1 INCREMENT BY 1 NOCACHE;
+
+CREATE TABLE personal_militar (
+    id                NUMBER(19, 0)      NOT NULL,
+    cedula            VARCHAR2(20 CHAR)  NOT NULL,
+    apellidos_nombres VARCHAR2(200 CHAR) NOT NULL,
+    tipo_persona      VARCHAR2(20 CHAR)  NOT NULL,
+    es_militar        NUMBER(1, 0)       DEFAULT 0 NOT NULL,
+    fecha_nacimiento  DATE,
+    edad              NUMBER(3, 0),
+    sexo              VARCHAR2(10 CHAR),
+    etnia             VARCHAR2(50 CHAR),
+    estado_civil      VARCHAR2(50 CHAR),
+    nro_hijos         NUMBER(3, 0)       DEFAULT 0 NOT NULL,
+    ocupacion         VARCHAR2(100 CHAR),
+    servicio_activo   NUMBER(1, 0)       DEFAULT 1 NOT NULL,
+    servicio_pasivo   NUMBER(1, 0)       DEFAULT 0 NOT NULL,
+    seguro            VARCHAR2(100 CHAR),
+    grado             VARCHAR2(50 CHAR),
+    especialidad      VARCHAR2(100 CHAR),
+    unidad_militar    VARCHAR2(150 CHAR),
+    provincia         VARCHAR2(100 CHAR),
+    canton            VARCHAR2(100 CHAR),
+    parroquia         VARCHAR2(100 CHAR),
+    barrio_sector     VARCHAR2(100 CHAR),
+    telefono          VARCHAR2(20 CHAR),
+    celular           VARCHAR2(20 CHAR),
+    email             VARCHAR2(100 CHAR),
+    activo            NUMBER(1, 0)       DEFAULT 1 NOT NULL,
+    created_at        TIMESTAMP(6)       DEFAULT CURRENT_TIMESTAMP NOT NULL,
+    updated_at        TIMESTAMP(6)       DEFAULT CURRENT_TIMESTAMP NOT NULL,
+    CONSTRAINT pk_personal_militar PRIMARY KEY (id),
+    CONSTRAINT uk_personal_militar_cedula UNIQUE (cedula),
+    CONSTRAINT ck_personal_militar_flags CHECK (es_militar IN (0,1) AND servicio_activo IN (0,1) AND servicio_pasivo IN (0,1) AND activo IN (0,1))
+);
+
+CREATE OR REPLACE TRIGGER tr_personal_militar_audit
 BEFORE UPDATE ON personal_militar
 FOR EACH ROW
 BEGIN
@@ -151,136 +284,247 @@ BEGIN
 END;
 /
 
--- Tabla de psicólogos (RF003, RF004)
+CREATE SEQUENCE seq_psicologos START WITH 1 INCREMENT BY 1 NOCACHE;
+
 CREATE TABLE psicologos (
-    id NUMBER PRIMARY KEY,
-    usuario_id NUMBER NOT NULL,
-    cedula VARCHAR2(20) UNIQUE NOT NULL,
-    apellidos_nombres VARCHAR2(200) NOT NULL,
-    grado VARCHAR2(50),
-    especialidad VARCHAR2(100),
-    telefono VARCHAR2(20),
-    celular VARCHAR2(20),
-    email VARCHAR2(100),
-    activo NUMBER(1) DEFAULT 1,
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    
-    CONSTRAINT fk_psicologos_usuario FOREIGN KEY (usuario_id) REFERENCES usuarios(id)
+    id                NUMBER(19, 0)      NOT NULL,
+    cedula            VARCHAR2(20 CHAR)  NOT NULL,
+    usuario_id        NUMBER(19, 0),
+    nombres           VARCHAR2(120 CHAR) NOT NULL,
+    apellidos         VARCHAR2(120 CHAR) NOT NULL,
+    apellidos_nombres VARCHAR2(240 CHAR) NOT NULL,
+    username          VARCHAR2(50 CHAR)  NOT NULL,
+    email             VARCHAR2(100 CHAR),
+    telefono          VARCHAR2(20 CHAR),
+    celular           VARCHAR2(20 CHAR),
+    grado             VARCHAR2(80 CHAR),
+    unidad_militar    VARCHAR2(120 CHAR),
+    especialidad      VARCHAR2(120 CHAR),
+    activo            NUMBER(1, 0)       DEFAULT 1 NOT NULL,
+    created_at        TIMESTAMP(6)       DEFAULT CURRENT_TIMESTAMP NOT NULL,
+    updated_at        TIMESTAMP(6)       DEFAULT CURRENT_TIMESTAMP NOT NULL,
+    CONSTRAINT pk_psicologos PRIMARY KEY (id),
+    CONSTRAINT uk_psicologos_cedula UNIQUE (cedula),
+    CONSTRAINT uk_psicologos_username UNIQUE (username),
+    CONSTRAINT ck_psicologos_activo CHECK (activo IN (0, 1))
 );
 
--- Secuencia para psicologos
-CREATE SEQUENCE seq_psicologos START WITH 1 INCREMENT BY 1;
+ALTER TABLE psicologos
+    ADD CONSTRAINT fk_psicologos_usuario FOREIGN KEY (usuario_id)
+        REFERENCES usuarios (id);
 
--- Tabla de asignación de pacientes a psicólogos (RF004, RF019)
-CREATE TABLE asignaciones_psicologos (
-    id NUMBER PRIMARY KEY,
-    psicologo_id NUMBER NOT NULL,
-    personal_militar_id NUMBER NOT NULL,
-    fecha_asignacion DATE NOT NULL,
-    motivo_asignacion CLOB,
-    activo NUMBER(1) DEFAULT 1,
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    
-    CONSTRAINT unique_psicologo_paciente_activo UNIQUE (psicologo_id, personal_militar_id, activo),
-    CONSTRAINT fk_asignaciones_psicologo FOREIGN KEY (psicologo_id) REFERENCES psicologos(id),
-    CONSTRAINT fk_asignaciones_personal FOREIGN KEY (personal_militar_id) REFERENCES personal_militar(id)
+CREATE OR REPLACE TRIGGER tr_psicologos_audit
+BEFORE INSERT OR UPDATE ON psicologos
+FOR EACH ROW
+BEGIN
+    IF INSERTING THEN
+        IF :NEW.created_at IS NULL THEN
+            :NEW.created_at := CURRENT_TIMESTAMP;
+        END IF;
+    END IF;
+    :NEW.updated_at := CURRENT_TIMESTAMP;
+END;
+/
+
+CREATE SEQUENCE seq_fichas_psicologicas START WITH 1 INCREMENT BY 1 NOCACHE;
+
+CREATE TABLE fichas_psicologicas (
+    id                                NUMBER(19, 0)      NOT NULL,
+    personal_militar_id               NUMBER(19, 0)      NOT NULL,
+    psicologo_id                      NUMBER(19, 0)      NOT NULL,
+    creado_por_psicologo_id           NUMBER(19, 0)      NOT NULL,
+    actualizado_por_psicologo_id      NUMBER(19, 0)      NOT NULL,
+    numero_evaluacion                 VARCHAR2(40 CHAR)  NOT NULL,
+    fecha_evaluacion                  DATE               NOT NULL,
+    tipo_evaluacion                   VARCHAR2(40 CHAR),
+    estado                            VARCHAR2(30 CHAR)  DEFAULT 'ABIERTA' NOT NULL,
+    condicion_clinica                 VARCHAR2(40 CHAR)  DEFAULT 'ALTA' NOT NULL,
+    observacion_clinica               CLOB,
+    motivo_consulta                   CLOB,
+    enfermedad_actual                 CLOB,
+    prenatal_condiciones_biologicas   CLOB,
+    prenatal_condiciones_psicologicas CLOB,
+    prenatal_observacion              CLOB,
+    natal_parto_normal                NUMBER(1, 0),
+    natal_termino                     VARCHAR2(50 CHAR),
+    natal_complicaciones              VARCHAR2(500 CHAR),
+    natal_observacion                 CLOB,
+    infancia_grado_sociabilidad       VARCHAR2(30 CHAR),
+    infancia_relacion_padres_hermanos VARCHAR2(30 CHAR),
+    infancia_discapacidad_intelectual NUMBER(1, 0),
+    infancia_grado_discapacidad       VARCHAR2(30 CHAR),
+    infancia_trastornos               VARCHAR2(500 CHAR),
+    infancia_tratamientos_psico       NUMBER(1, 0),
+    infancia_observacion              CLOB,
+    catalogo_cie10_id                 NUMBER(19, 0),
+    cie10_codigo                      VARCHAR2(10 CHAR),
+    cie10_descripcion                 CLOB,
+    plan_frecuencia                   VARCHAR2(20 CHAR),
+    plan_tipo_sesion                  VARCHAR2(20 CHAR),
+    plan_detalle                      VARCHAR2(500 CHAR),
+    created_at                        TIMESTAMP(6)       DEFAULT CURRENT_TIMESTAMP NOT NULL,
+    updated_at                        TIMESTAMP(6)       DEFAULT CURRENT_TIMESTAMP NOT NULL,
+    CONSTRAINT pk_fichas_psicologicas PRIMARY KEY (id),
+    CONSTRAINT uk_fichas_numero UNIQUE (numero_evaluacion),
+    CONSTRAINT fk_fichas_personal FOREIGN KEY (personal_militar_id) REFERENCES personal_militar (id),
+    CONSTRAINT fk_fichas_psicologo FOREIGN KEY (psicologo_id) REFERENCES psicologos (id),
+    CONSTRAINT fk_fichas_creado FOREIGN KEY (creado_por_psicologo_id) REFERENCES psicologos (id),
+    CONSTRAINT fk_fichas_actualizado FOREIGN KEY (actualizado_por_psicologo_id) REFERENCES psicologos (id),
+    CONSTRAINT fk_fichas_catalogo FOREIGN KEY (catalogo_cie10_id) REFERENCES catalogo_cie10 (id)
 );
 
--- Secuencia para asignaciones_psicologos
-CREATE SEQUENCE seq_asignaciones_psicologos START WITH 1 INCREMENT BY 1;
+CREATE INDEX ix_fichas_personal ON fichas_psicologicas (personal_militar_id);
+CREATE INDEX ix_fichas_psicologo ON fichas_psicologicas (psicologo_id);
+CREATE INDEX ix_fichas_catalogo ON fichas_psicologicas (catalogo_cie10_id);
 
--- Tabla de fichas históricas de valoración psicológica
+CREATE OR REPLACE TRIGGER tr_fichas_psicologicas_audit
+BEFORE INSERT OR UPDATE ON fichas_psicologicas
+FOR EACH ROW
+BEGIN
+    IF INSERTING THEN
+        IF :NEW.created_at IS NULL THEN
+            :NEW.created_at := CURRENT_TIMESTAMP;
+        END IF;
+    END IF;
+    :NEW.updated_at := CURRENT_TIMESTAMP;
+END;
+/
+
+CREATE SEQUENCE seq_seguimientos_psicologicos START WITH 1 INCREMENT BY 1 NOCACHE;
+
+CREATE TABLE seguimientos_psicologicos (
+    id                    NUMBER(19, 0)      NOT NULL,
+    ficha_psicologica_id  NUMBER(19, 0)      NOT NULL,
+    psicologo_id          NUMBER(19, 0)      NOT NULL,
+    fecha_seguimiento     DATE               NOT NULL,
+    observaciones         CLOB,
+    created_at            TIMESTAMP(6)       DEFAULT CURRENT_TIMESTAMP NOT NULL,
+    updated_at            TIMESTAMP(6)       DEFAULT CURRENT_TIMESTAMP NOT NULL,
+    CONSTRAINT pk_seguimientos_psicologicos PRIMARY KEY (id),
+    CONSTRAINT fk_seguimientos_ficha FOREIGN KEY (ficha_psicologica_id) REFERENCES fichas_psicologicas (id),
+    CONSTRAINT fk_seguimientos_psicologo FOREIGN KEY (psicologo_id) REFERENCES psicologos (id)
+);
+
+CREATE OR REPLACE TRIGGER tr_seguimientos_audit
+BEFORE INSERT OR UPDATE ON seguimientos_psicologicos
+FOR EACH ROW
+BEGIN
+    IF INSERTING THEN
+        IF :NEW.created_at IS NULL THEN
+            :NEW.created_at := CURRENT_TIMESTAMP;
+        END IF;
+    END IF;
+    :NEW.updated_at := CURRENT_TIMESTAMP;
+END;
+/
+
+-- =============================================
+-- ENTIDADES DEL SERVICIO DOCUMENTOS
+-- =============================================
+
+CREATE SEQUENCE seq_tipos_documento START WITH 1 INCREMENT BY 1 NOCACHE;
+
+CREATE TABLE tipos_documento (
+    id           NUMBER(19, 0)      NOT NULL,
+    nombre       VARCHAR2(100 CHAR) NOT NULL,
+    descripcion  CLOB,
+    obligatorio  NUMBER(1, 0)       DEFAULT 0 NOT NULL,
+    CONSTRAINT pk_tipos_documento PRIMARY KEY (id),
+    CONSTRAINT uk_tipos_documento_nombre UNIQUE (nombre),
+    CONSTRAINT ck_tipos_documento_obl CHECK (obligatorio IN (0, 1))
+);
+
+CREATE SEQUENCE seq_documentos_digitales START WITH 1 INCREMENT BY 1 NOCACHE;
+
+CREATE TABLE documentos_digitales (
+    id                  NUMBER(19, 0)      NOT NULL,
+    tipo_documento_id   NUMBER(19, 0),
+    personal_militar_id NUMBER(19, 0)      NOT NULL,
+    ficha_psicologica_id NUMBER(19, 0),
+    ficha_historica_id  NUMBER(19, 0),
+    nombre_original     VARCHAR2(255 CHAR) NOT NULL,
+    ruta_almacenamiento VARCHAR2(500 CHAR) NOT NULL,
+    tipo_mime           VARCHAR2(150 CHAR),
+    tamano_bytes        NUMBER(19, 0),
+    descripcion         CLOB,
+    origen_modulo       VARCHAR2(120 CHAR),
+    referencia_externa  VARCHAR2(150 CHAR),
+    origen_registro     VARCHAR2(100 CHAR),
+    notas               CLOB,
+    metadatos           CLOB,
+    checksum            VARCHAR2(128 CHAR),
+    version_documento   NUMBER(5, 0)       DEFAULT 1 NOT NULL,
+    activo              NUMBER(1, 0)       DEFAULT 1 NOT NULL,
+    fecha_subida        TIMESTAMP(6)       DEFAULT CURRENT_TIMESTAMP NOT NULL,
+    created_at          TIMESTAMP(6)       DEFAULT CURRENT_TIMESTAMP NOT NULL,
+    updated_at          TIMESTAMP(6)       DEFAULT CURRENT_TIMESTAMP NOT NULL,
+    CONSTRAINT pk_documentos_digitales PRIMARY KEY (id),
+    CONSTRAINT ck_documentos_activo CHECK (activo IN (0, 1)),
+    CONSTRAINT ck_documentos_relacion CHECK (ficha_psicologica_id IS NOT NULL OR ficha_historica_id IS NOT NULL)
+);
+
+ALTER TABLE documentos_digitales
+    ADD CONSTRAINT fk_documentos_tipo FOREIGN KEY (tipo_documento_id)
+        REFERENCES tipos_documento (id);
+
+ALTER TABLE documentos_digitales
+    ADD CONSTRAINT fk_documentos_personal FOREIGN KEY (personal_militar_id)
+        REFERENCES personal_militar (id);
+
+ALTER TABLE documentos_digitales
+    ADD CONSTRAINT fk_documentos_ficha FOREIGN KEY (ficha_psicologica_id)
+        REFERENCES fichas_psicologicas (id);
+CREATE INDEX ix_documentos_ficha ON documentos_digitales (ficha_psicologica_id);
+CREATE INDEX ix_documentos_personal ON documentos_digitales (personal_militar_id);
+
+CREATE OR REPLACE TRIGGER tr_documentos_audit
+BEFORE INSERT OR UPDATE ON documentos_digitales
+FOR EACH ROW
+BEGIN
+    IF INSERTING THEN
+        IF :NEW.created_at IS NULL THEN
+            :NEW.created_at := CURRENT_TIMESTAMP;
+        END IF;
+        IF :NEW.fecha_subida IS NULL THEN
+            :NEW.fecha_subida := CURRENT_TIMESTAMP;
+        END IF;
+        IF :NEW.version_documento IS NULL THEN
+            :NEW.version_documento := 1;
+        END IF;
+        IF :NEW.activo IS NULL THEN
+            :NEW.activo := 1;
+        END IF;
+    END IF;
+    :NEW.updated_at := CURRENT_TIMESTAMP;
+END;
+/
+
+-- =============================================
+-- LEGADO: FICHAS HISTORICAS (LIGADAS A REPORTES)
+-- =============================================
+
+CREATE SEQUENCE seq_fichas_historicas START WITH 1 INCREMENT BY 1 NOCACHE;
+
 CREATE TABLE fichas_historicas (
-    id NUMBER PRIMARY KEY,
-    numero_ficha VARCHAR2(50),
-    numero_cedula VARCHAR2(20) NOT NULL,
-    apellidos_nombres VARCHAR2(200) NOT NULL,
-    sexo VARCHAR2(20),
-    estado_civil VARCHAR2(30),
-    nivel_instruccion VARCHAR2(30),
-    grado VARCHAR2(50),
-    arma_servicio VARCHAR2(100),
-    unidad VARCHAR2(150),
-    grupo_compania VARCHAR2(150),
-    cargo_actual VARCHAR2(150),
-    fecha_ingreso DATE,
-    tiempo_servicio_anios NUMBER,
-    fecha_nacimiento DATE,
-    edad_actual NUMBER,
-    numero_hijos NUMBER,
-    ocupacion VARCHAR2(150),
-    especialidad VARCHAR2(150),
-    religion VARCHAR2(30),
-    tipo_sangre VARCHAR2(10),
-    domicilio_provincia VARCHAR2(100),
-    domicilio_canton VARCHAR2(100),
-    domicilio_parroquia VARCHAR2(100),
-    domicilio_barrio VARCHAR2(150),
-    telefono VARCHAR2(20),
-    celular VARCHAR2(20),
-    email VARCHAR2(150),
-    contacto_emergencia VARCHAR2(200),
-    telefono_emergencia VARCHAR2(20),
-    antecedentes_personales CLOB,
-    antecedentes_familiares CLOB,
-    enfermedades_actuales CLOB,
-    tratamientos_previos CLOB,
-    cirugias_previas CLOB,
-    hospitalizaciones_previas CLOB,
-    alergias CLOB,
-    medicacion_actual CLOB,
-    consumo_sustancias CLOB,
-    habitos_salud CLOB,
-    sueno_descripcion CLOB,
-    horas_sueno NUMBER,
-    alimentacion CLOB,
-    actividad_fisica CLOB,
-    motivo_consulta CLOB,
-    historia_problema CLOB,
-    contexto_familiar CLOB,
-    contexto_social CLOB,
-    contexto_laboral CLOB,
-    eventos_significativos CLOB,
-    antecedentes_psicologicos CLOB,
-    antecedentes_psiquiatricos CLOB,
-    red_apoyo CLOB,
-    intervenciones_previas CLOB,
-    observaciones_psicosociales CLOB,
-    evaluacion_cognitiva CLOB,
-    evaluacion_emocional CLOB,
-    evaluacion_conductual CLOB,
-    evaluacion_familiar CLOB,
-    pruebas_aplicadas CLOB,
-    resultados_pruebas CLOB,
-    diagnostico_dsm CLOB,
-    diagnostico_cie10 CLOB,
-    reporte_riesgos CLOB,
-    observaciones_evaluacion CLOB,
-    plan_intervencion CLOB,
-    objetivos_terapeuticos CLOB,
-    intervenciones_propuestas CLOB,
-    derivaciones CLOB,
-    recomendaciones_generales CLOB,
-    fecha_proxima_cita DATE,
-    responsable_nombre VARCHAR2(200),
-    responsable_cargo VARCHAR2(150),
-    responsable_identificacion VARCHAR2(50),
-    firma_digital_hash VARCHAR2(255),
-    observaciones_finales CLOB,
-    estado_ficha VARCHAR2(20) DEFAULT 'BORRADOR' NOT NULL,
-    fecha_evaluacion DATE,
-    psicologo_responsable VARCHAR2(200),
-    dependencia_solicitante VARCHAR2(200),
-    observaciones_generales CLOB,
-    creado_por VARCHAR2(100),
-    actualizado_por VARCHAR2(100),
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMP
+    id                 NUMBER(19, 0)      NOT NULL,
+    personal_militar_id NUMBER(19, 0)      NOT NULL,
+    numero_ficha       VARCHAR2(50 CHAR),
+    numero_cedula      VARCHAR2(20 CHAR)  NOT NULL,
+    apellidos_nombres  VARCHAR2(200 CHAR) NOT NULL,
+    estado_ficha       VARCHAR2(20 CHAR),
+    fecha_evaluacion   DATE,
+    diagnostico_cie10  CLOB,
+    resumen_clinico    CLOB,
+    observaciones      CLOB,
+    fuente_registro    VARCHAR2(100 CHAR),
+    referencia_archivo VARCHAR2(255 CHAR),
+    created_at         TIMESTAMP(6)       DEFAULT CURRENT_TIMESTAMP NOT NULL,
+    updated_at         TIMESTAMP(6)       DEFAULT CURRENT_TIMESTAMP NOT NULL,
+    CONSTRAINT pk_fichas_historicas PRIMARY KEY (id),
+    CONSTRAINT fk_fichas_historicas_personal FOREIGN KEY (personal_militar_id) REFERENCES personal_militar (id)
 );
 
-CREATE SEQUENCE seq_fichas_historicas START WITH 1 INCREMENT BY 1;
-
-CREATE OR REPLACE TRIGGER tr_fichas_historicas_ts
+CREATE OR REPLACE TRIGGER tr_fichas_historicas_audit
 BEFORE INSERT OR UPDATE ON fichas_historicas
 FOR EACH ROW
 BEGIN
@@ -293,55 +537,40 @@ BEGIN
 END;
 /
 
--- Tabla de documentos asociados a fichas
-CREATE TABLE documentos_ficha (
-    id NUMBER PRIMARY KEY,
-    ficha_id NUMBER NOT NULL,
-    tipo_documento_id NUMBER NOT NULL,
-    nombre_archivo VARCHAR2(255) NOT NULL,
-    ruta_archivo VARCHAR2(500) NOT NULL,
-    descripcion CLOB,
-    fecha_subida DATE,
-    tamano NUMBER,
-    activo NUMBER(1) DEFAULT 1,
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    CONSTRAINT fk_documentos_ficha_ficha FOREIGN KEY (ficha_id) REFERENCES fichas_historicas(id),
-    CONSTRAINT fk_documentos_ficha_tipo FOREIGN KEY (tipo_documento_id) REFERENCES tipos_documento(id)
+ALTER TABLE documentos_digitales
+    ADD CONSTRAINT fk_documentos_ficha_historica FOREIGN KEY (ficha_historica_id)
+        REFERENCES fichas_historicas (id);
+
+CREATE INDEX ix_documentos_historica ON documentos_digitales (ficha_historica_id);
+
+CREATE INDEX ix_fichas_historicas_personal ON fichas_historicas (personal_militar_id);
+
+-- =============================================
+-- DATOS SEMILLA BASICOS
+-- =============================================
+
+INSERT INTO roles (id, nombre, descripcion, nivel_permisos, activo)
+VALUES (seq_roles.NEXTVAL, 'Administrador', 'Acceso completo al sistema', 100, 1);
+
+INSERT INTO roles (id, nombre, descripcion, nivel_permisos, activo)
+VALUES (seq_roles.NEXTVAL, 'Psicologo', 'Gestion de fichas y reportes', 50, 1);
+
+INSERT INTO roles (id, nombre, descripcion, nivel_permisos, activo)
+VALUES (seq_roles.NEXTVAL, 'Observador', 'Solo lectura', 10, 1);
+
+INSERT INTO usuarios (id, username, password_hash, email, rol_id, activo, intentos_login, bloqueado)
+VALUES (
+    seq_usuarios.NEXTVAL,
+    'admin',
+    '$2b$12$abcdefghijklmnopqrstuv', -- Reemplazar con hash real
+    'admin@sistema.mil',
+    (SELECT id FROM roles WHERE nombre = 'Administrador'),
+    1,
+    0,
+    0
 );
 
-CREATE SEQUENCE seq_documentos_ficha START WITH 1 INCREMENT BY 1;
-
-CREATE OR REPLACE TRIGGER tr_documentos_ficha_ts
-BEFORE INSERT OR UPDATE ON documentos_ficha
-FOR EACH ROW
-BEGIN
-    IF INSERTING THEN
-        IF :NEW.created_at IS NULL THEN
-            :NEW.created_at := CURRENT_TIMESTAMP;
-        END IF;
-        IF :NEW.fecha_subida IS NULL THEN
-            :NEW.fecha_subida := TRUNC(SYSDATE);
-        END IF;
-    END IF;
-END;
-/
-
--- =============================================
--- DATOS INICIALES
--- =============================================
-
--- Insertar roles del sistema
-INSERT INTO roles (id, nombre, descripcion, nivel_permisos) VALUES
-(seq_roles.NEXTVAL, 'Administrador', 'Acceso completo al sistema', 100);
-
-INSERT INTO roles (id, nombre, descripcion, nivel_permisos) VALUES
-(seq_roles.NEXTVAL, 'Psicologo', 'Psicólogo que realiza evaluaciones', 50);
-
-INSERT INTO roles (id, nombre, descripcion, nivel_permisos) VALUES
-(seq_roles.NEXTVAL, 'Observador', 'Solo puede visualizar reportes', 10);
-
--- Insertar usuario administrador por defecto (password: admin123)
-INSERT INTO usuarios (id, username, password_hash, email, rol_id) VALUES
-(seq_usuarios.NEXTVAL, 'admin', '$2b$10$8K1p/a0dRa1C5x0e0w0K3eZ0b8Qa8Z5Z8Z8Z8Z8Z8Z8Z8Z8Z8Z8Z8', 'admin@sistema.com', 1);
-
 COMMIT;
+
+SET ECHO OFF;
+PROMPT Setup completado. Verifica datos seed y contraseñas antes de usar en produccion.

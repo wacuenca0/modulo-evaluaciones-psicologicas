@@ -11,18 +11,25 @@ public class ReporteAtencionPsicologoDTO {
     private Long psicologoId;
     private String psicologoNombre;
     private String psicologoUsername;
+    private String psicologoUnidadMilitar;
     private long totalFichas;
     private long fichasActivas;
     private long fichasObservacion;
     private long totalSeguimientos;
     private long personasAtendidas;
     private LocalDate ultimaAtencion;
+    private Long filtroDiagnosticoId;
     private String filtroDiagnosticoCodigo;
     private String filtroDiagnosticoTexto;
+    private String filtroCedula;
+    private String filtroUnidadMilitar;
+    private LocalDate filtroFechaDesde;
+    private LocalDate filtroFechaHasta;
 
     public ReporteAtencionPsicologoDTO(Long psicologoId,
                                        String psicologoNombre,
                                        String psicologoUsername,
+                                       String psicologoUnidadMilitar,
                                        long totalFichas,
                                        long fichasActivas,
                                        long fichasObservacion,
@@ -32,6 +39,7 @@ public class ReporteAtencionPsicologoDTO {
         this.psicologoId = psicologoId;
         this.psicologoNombre = psicologoNombre;
         this.psicologoUsername = psicologoUsername;
+        this.psicologoUnidadMilitar = psicologoUnidadMilitar;
         this.totalFichas = totalFichas;
         this.fichasActivas = fichasActivas;
         this.fichasObservacion = fichasObservacion;

@@ -1,0 +1,594 @@
+================================================================================
+GUÍA: ASIGNAR CONDICIONES CLÍNICAS A FICHAS PSICOLÓGICAS
+================================================================================
+
+DESCRIPCIÓN GENERAL:
+Este endpoint permite establecer la condición clínica final de una ficha 
+psicológica. Hay tres condiciones posibles: ALTA, SEGUIMIENTO y TRANSFERENCIA.
+Cada condición tiene diferentes requisitos de datos.
+
+================================================================================
+ENDPOINT ÚNICO PARA LAS 3 CONDICIONES
+================================================================================
+
+URL: PUT /gestion/api/fichas-psicologicas/{idFicha}/condicion
+
+MÉTODO: PUT
+
+AUTENTICACIÓN: 
+Requiere token Bearer y rol ADMINISTRADOR o PSICOLOGO
+
+PARÁMETROS DE RUTA:
+- {idFicha}: ID numérico de la ficha psicológica (ejemplo: 234)
+
+EJEMPLO URL COMPLETA:
+PUT http://localhost:8082/gestion/api/fichas-psicologicas/234/condicion
+
+================================================================================
+CASO 1: ASIGNAR CONDICIÓN "ALTA"
+================================================================================
+
+DESCRIPCIÓN:
+Se usa cuando el paciente NO presenta psicopatología y puede ser dado de alta.
+Esta condición LIMPIA automáticamente cualquier diagnóstico y plan previo.
+
+CUÁNDO USAR:
+- Evaluación sin hallazgos patológicos
+- Finalización exitosa de tratamiento
+- Personal militar apto psicológicamente
+
+JSON MÍNIMO REQUERIDO:
+{
+  "condicion": "Alta"
+}
+
+JSON COMPLETO (campos opcionales en null):
+{
+  "condicion": "Alta",
+  "diagnosticoCie10Codigo": null,
+  "diagnosticoCie10Nombre": null,
+  "diagnosticoCie10CategoriaPadre": null,
+  "diagnosticoCie10Nivel": null,
+  "diagnosticoCie10Descripcion": null,
+  "planFrecuencia": null,
+  "planTipoSesion": null,
+  "planDetalle": null,
+  "proximoSeguimiento": null,
+  "transferenciaUnidad": null,
+  "transferenciaObservacion": null
+}
+
+RESPUESTA EXITOSA (200 OK):
+{
+  "id": 234,
+  "numeroEvaluacion": "EV-2026-00234",
+  "condicion": "No presenta psicopatologia (Alta)",
+  "diagnosticoCie10": null,
+  "planSeguimiento": null,
+  "ultimaFechaSeguimiento": null,
+  "proximoSeguimiento": null,
+  "transferenciaFecha": null,
+  "transferenciaUnidad": null,
+  "transferenciaObservacion": null,
+  "estado": "Activa"
+}
+
+NOTAS IMPORTANTES:
+✓ Solo requiere el campo "condicion"
+✓ El backend limpia automáticamente diagnóstico y plan
+✓ Se puede enviar los demás campos en null o simplemente no enviarlos
+✓ No valida campos de diagnóstico ni plan para ALTA
+
+================================================================================
+CASO 2: ASIGNAR CONDICIÓN "SEGUIMIENTO"
+================================================================================
+
+DESCRIPCIÓN:
+Se usa cuando el paciente requiere citas periódicas de control y seguimiento.
+REQUIERE diagnóstico CIE-10 y plan de seguimiento completo.
+
+CUÁNDO USAR:
+- Trastornos que requieren monitoreo
+- Pacientes en proceso de tratamiento
+- Necesidad de controles periódicos
+
+CAMPOS OBLIGATORIOS:
+✓ condicion
+✓ diagnosticoCie10Codigo
+✓ planFrecuencia
+✓ planTipoSesion
+
+JSON MÍNIMO REQUERIDO:
+{
+  "condicion": "Seguimiento",
+  "diagnosticoCie10Id": 15,
+  "planFrecuencia": "Mensual",
+  "planTipoSesion": "Individual"
+}
+
+JSON COMPLETO RECOMENDADO:
+{
+  "condicion": "Seguimiento",
+  "diagnosticoCie10Id": 15,
+  "diagnosticoCie10Codigo": "F32.0",
+  "diagnosticoCie10Nombre": "Episodio depresivo leve",
+  "diagnosticoCie10CategoriaPadre": "F30-F39",
+  "diagnosticoCie10Nivel": 3,
+  "diagnosticoCie10Descripcion": "Trastornos del estado de ánimo (afectivos)",
+  "planFrecuencia": "Mensual",
+  "planTipoSesion": "Individual",
+  "planDetalle": "Terapia cognitivo-conductual, sesiones de 45 minutos",
+  "proximoSeguimiento": "2026-02-15"
+}
+
+VALORES VÁLIDOS PARA CAMPOS:
+
+planFrecuencia (String):
+- "Semanal"
+- "Quincenal"
+- "Mensual"
+- "Bimensual"
+- "Trimestral"
+- "Personalizada"
+
+planTipoSesion (String):
+- "Individual"
+- "Grupal"
+- "Mixta"
+- "Familiar"
+
+proximoSeguimiento (String):
+- Formato: "YYYY-MM-DD"
+- Ejemplo: "2026-02-15"
+- Opcional pero muy recomendado
+
+RESPUESTA EXITOSA (200 OK):
+{
+  "id": 234,
+  "numeroEvaluacion": "EV-2026-00234",
+  "condicion": "Seguimiento (Requiere citas periodicas)",
+  "diagnosticoCie10": {
+    "codigo": "F32.0",
+    "nombre": "Episodio depresivo leve",
+    "categoriaPadre": "F30-F39",
+    "nivel": 3,
+    "descripcion": "Trastornos del estado de ánimo (afectivos)"
+  },
+  "planSeguimiento": {
+    "frecuencia": "Mensual",
+    "tipoSesion": "Individual",
+    "detalle": "Terapia cognitivo-conductual, sesiones de 45 minutos"
+  },
+  "proximoSeguimiento": "2026-02-15",
+  "ultimaFechaSeguimiento": null,
+  "transferenciaFecha": null,
+  "transferenciaUnidad": null,
+  "transferenciaObservacion": null,
+  "estado": "Activa"
+}
+
+ERRORES COMUNES (400 BAD REQUEST):
+{
+  "error": "Seguimiento requiere diagnóstico CIE-10 y plan de seguimiento completo"
+}
+
+NOTAS IMPORTANTES:
+✓ El código CIE-10 debe ser válido (existe en el catálogo)
+✓ Si no hay proximoSeguimiento, el sistema lo acepta pero es recomendable
+✓ El campo transferenciaUnidad NO se usa en Seguimiento (debe ser null)
+
+================================================================================
+CASO 3: ASIGNAR CONDICIÓN "TRANSFERENCIA"
+================================================================================
+
+DESCRIPCIÓN:
+Se usa cuando el paciente es derivado a otra unidad o especialista.
+REQUIERE diagnóstico CIE-10 y unidad de destino obligatoria.
+
+CUÁNDO USAR:
+- Derivación a psiquiatría
+- Transferencia a otra unidad militar
+- Derivación a especialista externo
+
+CAMPOS OBLIGATORIOS:
+✓ condicion
+✓ diagnosticoCie10Codigo
+✓ transferenciaUnidad
+
+JSON MÍNIMO REQUERIDO:
+{
+  "condicion": "Transferencia",
+  "diagnosticoCie10Id": 20,
+  "transferenciaUnidad": "Hospital Psiquiátrico Militar"
+}
+
+JSON COMPLETO RECOMENDADO:
+{
+  "condicion": "Transferencia",
+  "diagnosticoCie10Id": 20,
+  "diagnosticoCie10Codigo": "F41.1",
+  "diagnosticoCie10Nombre": "Trastorno de ansiedad generalizada",
+  "diagnosticoCie10CategoriaPadre": "F40-F48",
+  "diagnosticoCie10Nivel": 3,
+  "diagnosticoCie10Descripcion": "Trastornos neuróticos, secundarios a situaciones estresantes y somatomorfos",
+  "transferenciaUnidad": "Hospital Psiquiátrico Militar",
+  "transferenciaObservacion": "Requiere valoración psiquiátrica para tratamiento farmacológico. Ansiedad severa que no responde a psicoterapia."
+}
+
+OPCIONAL - Con plan de seguimiento en destino:
+{
+  "condicion": "Transferencia",
+  "diagnosticoCie10Codigo": "F41.1",
+  "diagnosticoCie10Nombre": "Trastorno de ansiedad generalizada",
+  "transferenciaUnidad": "Hospital Psiquiátrico Militar",
+  "transferenciaObservacion": "Requiere valoración psiquiátrica urgente",
+  "planFrecuencia": "Semanal",
+  "planTipoSesion": "Individual",
+  "planDetalle": "Se recomienda sesiones semanales en unidad receptora"
+}
+
+RESPUESTA EXITOSA (200 OK):
+{
+  "id": 234,
+  "numeroEvaluacion": "EV-2026-00234",
+  "condicion": "Transferencia (Derivado a otro especialista o unidad)",
+  "diagnosticoCie10": {
+    "codigo": "F41.1",
+    "nombre": "Trastorno de ansiedad generalizada",
+    "categoriaPadre": "F40-F48",
+    "nivel": 3,
+    "descripcion": "Trastornos neuróticos, secundarios a situaciones estresantes y somatomorfos"
+  },
+  "planSeguimiento": null,
+  "proximoSeguimiento": null,
+  "ultimaFechaSeguimiento": null,
+  "transferenciaFecha": "2026-01-12",
+  "transferenciaUnidad": "Hospital Psiquiátrico Militar",
+  "transferenciaObservacion": "Requiere valoración psiquiátrica urgente",
+  "estado": "Activa"
+}
+
+ERRORES COMUNES (400 BAD REQUEST):
+{
+  "error": "Debe registrar la unidad o lugar de transferencia"
+}
+
+O:
+
+{
+  "error": "Transferencia requiere diagnóstico CIE-10"
+}
+
+NOTAS IMPORTANTES:
+✓ transferenciaUnidad es OBLIGATORIO para Transferencia
+✓ La fecha de transferencia se genera automáticamente (fecha actual)
+✓ El campo proximoSeguimiento NO se usa en Transferencia
+✓ transferenciaObservacion es muy recomendable para contexto clínico
+
+================================================================================
+TABLA RESUMEN DE CAMPOS POR CONDICIÓN
+================================================================================
+
+Campo                          | ALTA    | SEGUIMIENTO | TRANSFERENCIA
+-------------------------------|---------|-------------|---------------
+condicion                      | ✓ REQ   | ✓ REQ       | ✓ REQ
+diagnosticoCie10Codigo         | ✗       | ✓ REQ       | ✓ REQ
+diagnosticoCie10Nombre         | ✗       | ○ OPC       | ○ OPC
+diagnosticoCie10CategoriaPadre | ✗       | ○ OPC       | ○ OPC
+diagnosticoCie10Nivel          | ✗       | ○ OPC       | ○ OPC
+diagnosticoCie10Descripcion    | ✗       | ○ OPC       | ○ OPC
+planFrecuencia                 | ✗       | ✓ REQ       | ○ OPC
+planTipoSesion                 | ✗       | ✓ REQ       | ○ OPC
+planDetalle                    | ✗       | ○ OPC       | ○ OPC
+proximoSeguimiento             | ✗       | ○ REC       | ✗
+transferenciaUnidad            | ✗       | ✗           | ✓ REQ
+transferenciaObservacion       | ✗       | ✗           | ○ REC
+
+LEYENDA:
+✓ REQ = Requerido (obligatorio)
+○ OPC = Opcional
+○ REC = Recomendado (opcional pero importante)
+✗ = No aplica / Se ignora
+
+================================================================================
+EJEMPLOS DE USO DESDE FRONTEND
+================================================================================
+
+EJEMPLO 1: COMPONENTE REACT/ANGULAR - ALTA
+-------------------------------------------
+
+const asignarAlta = async (fichaId) => {
+  const payload = {
+    condicion: "Alta"
+  };
+  
+  try {
+    const response = await fetch(
+      `${API_BASE}/gestion/api/fichas-psicologicas/${fichaId}/condicion`,
+      {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify(payload)
+      }
+    );
+    
+    if (response.ok) {
+      const data = await response.json();
+      console.log('Alta registrada:', data);
+      // Mostrar mensaje de éxito
+      // Redirigir o actualizar vista
+    } else {
+      const error = await response.json();
+      console.error('Error:', error);
+      // Mostrar mensaje de error
+    }
+  } catch (err) {
+    console.error('Error de red:', err);
+  }
+};
+
+EJEMPLO 2: COMPONENTE REACT/ANGULAR - SEGUIMIENTO
+--------------------------------------------------
+
+const asignarSeguimiento = async (fichaId, formData) => {
+  const payload = {
+    condicion: "SeguId: formData.diagnosticoId,          // OBLIGATORIO: ID del catálogo (Ej: 15)
+    diagnosticoCie10Codigo: formData.codigoCie10,         // Ej: "F32.0"
+    diagnosticoCie10Nombre: formData.nombreDiagnostico,   // Ej: "Episodio depresivo leve"
+    diagnosticoCie10CategoriaPadre: formData.categoriaPadre, // Ej: "F30-F39"
+    diagnosticoCie10Nivel: formData.nivel,                // Ej: 3
+    diagnosticoCie10Descripcion: formData.descripcion,    // Ej: "Trastornos del estado de ánimo...
+    diagnosticoCie10Nombre: formData.nombreDiagnostico,   // Ej: "Episodio depresivo leve"
+    planFrecuencia: formData.frecuencia,                  // Ej: "Mensual"
+    planTipoSesion: formData.tipoSesion,                  // Ej: "Individual"
+    planDetalle: formData.detallePlan,                    // Ej: "Terapia cognitiva"
+    proximoSeguimiento: formData.proximaCita              // Ej: "2026-02-15"
+  };
+  
+  try {
+    const response = await fetch(
+      `${API_BASE}/gestion/api/fichas-psicologicas/${fichaId}/condicion`,
+      {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify(payload)
+      }
+    );
+    
+    if (response.ok) {
+      const data = await response.json();
+      console.log('Seguimiento registrado:', data);
+    } else {
+      const error = await response.json();
+      console.error('Error:', error.error);
+    }
+  } catch (err) {
+    console.error('Error de red:', err);
+  }
+};
+
+EJEMPLO 3: COMPONENTE REACT/ANGULAR - TRANSFERENCIA
+----------------------------------------------------
+Id: formData.diagnosticoId,          // OBLIGATORIO: ID del catálogo
+    diagnosticoCie10Codigo: formData.codigoCie10,
+    diagnosticoCie10Nombre: formData.nombreDiagnostico,
+    diagnosticoCie10CategoriaPadre: formData.categoriaPadre,
+    diagnosticoCie10Nivel: formData.nivel,
+    diagnosticoCie10Descripcion: formData.descripcion => {
+  const payload = {
+    condicion: "Transferencia",
+    diagnosticoCie10Codigo: formData.codigoCie10,
+    diagnosticoCie10Nombre: formData.nombreDiagnostico,
+    transferenciaUnidad: formData.unidadDestino,          // OBLIGATORIO
+    transferenciaObservacion: formData.observaciones      // Muy recomendado
+  };
+  
+  try {
+    const response = await fetch(
+      `${API_BASE}/gestion/api/fichas-psicologicas/${fichaId}/condicion`,
+      {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify(payload)
+      }
+    );
+    
+    if (response.ok) {
+      const data = await response.json();
+      console.log('Transferencia registrada:', data);
+      console.log('Fecha de transferencia:', data.transferenciaFecha);
+    } else {
+      const error = await response.json();
+      console.error('Error:', error.error);
+    }
+  } catch (err) {
+    console.error('Error de red:', err);
+  }
+};
+
+================================================================================
+VALIDACIONES DEL FRONTEND RECOMENDADAS
+================================================================================
+
+ANTES DE ENVIAR ALTA:
+✓ Confirmar con el usuario (modal de confirmación)
+✓ Advertir que se borrará diagnóstico previo si existía
+
+ANTES DE ENVIAR SEGUIMIENTO:
+✓ Validar que diagnosticoCie10Codigo no esté vacío
+✓ Validar que planFrecuencia esté seleccionado
+✓ Validar que planTipoSesion esté seleccionado
+✓ Sugerir ingresar proximoSeguimiento
+✓ Validar formato de fecha proximoSeguimiento (YYYY-MM-DD)
+
+ANTES DE ENVIAR TRANSFERENCIA:
+✓ Validar que diagnosticoCie10Codigo no esté vacío
+✓ Validar que transferenciaUnidad no esté vacío
+✓ Sugerir ingresar transferenciaObservacion (no obligatorio pero importante)
+✓ Confirmar con el usuario la transferencia
+
+================================================================================
+CATÁLOGO CIE-10 PARA DIAGNÓSTICOS
+================================================================================
+
+IMPORTANTE: DEBE USAR EL ID DEL CATÁLOGO, NO EL CÓDIGO
+
+ENDPOINT PARA OBTENER DIAGNÓSTICOS:
+GET /catalogos/api/catalogo-cie10?soloActivos=true
+
+RESPUESTA:
+[
+  {
+    "id": 15,
+    "codigo": "F32.0",
+    "nombre": "Episodio depresivo leve",
+    "categoriaPadre": "F30-F39",
+    "nivel": 3,
+    "descripcion": "Trastornos del estado de ánimo (afectivos)",
+    "activo": true
+  },
+  {
+    "id": 20,
+    "codigo": "F41.1",
+    "nombre": "Trastorno de ansiedad generalizada",
+    "categoriaPadre": "F40-F48",
+    "nivel": 3,
+    "descripcion": "Trastornos neuróticos...",
+    "activo": true
+  }
+]
+
+CÓMO USAR EN EL FRONTEND:
+1. Cargar el catálogo al iniciar el componente
+2. Mostrar en un select/autocomplete
+3. Cuando el usuario selecciona un diagnóstico, capturar TODOS sus campos
+4. IMPORTANTE: Enviar el ID del catálogo en "diagnosticoCie10Id" 
+5. Enviar código, nombre, categoriaPadre, nivel y descripción como información
+
+================================================================================
+MENSAJES DE ERROR POSIBLES
+================================================================================
+
+ERROR 400 - Falta diagnóstico en Seguimiento:
+{
+  "timestamp": "2026-01-12T10:30:00",
+  "status": 400,
+  "error": "Bad Request",
+  "message": "Seguimiento requiere diagnóstico CIE-10 y plan de seguimiento completo"
+}
+
+ERROR 400 - Falta plan en Seguimiento:
+{
+  "timestamp": "2026-01-12T10:30:00",
+  "status": 400,
+  "error": "Bad Request",
+  "message": "Seguimiento requiere plan de seguimiento completo (frecuencia y tipo de sesión)"
+}
+
+ERROR 400 - Falta unidad en Transferencia:
+{
+  "timestamp": "2026-01-12T10:30:00",
+  "status": 400,
+  "error": "Bad Request",
+  "message": "Debe registrar la unidad o lugar de transferencia"
+}
+
+ERROR 404 - Ficha no encontrada:
+{
+  "timestamp": "2026-01-12T10:30:00",
+  "status": 404,
+  "error": "Not Found",
+  "message": "Ficha psicológica no encontrada"
+}
+
+ERROR 403 - Sin autorización:
+{
+  "timestamp": "2026-01-12T10:30:00",
+  "status": 403,
+  "error": "Forbidden",
+  "message": "No tiene permisos para acceder a este recurso"
+}
+
+================================================================================
+FLUJO RECOMENDADO EN EL FRONTEND
+================================================================================
+
+1. PANTALLA DE CONDICIÓN CLÍNICA
+   ├── Radio buttons o Select para elegir condición
+   │   ├── ○ Alta
+   │   ├── ○ Seguimiento
+   │   └── ○ Transferencia
+   │
+   ├── Si ALTA seleccionado:
+   │   └── Mostrar mensaje: "Se dará de alta sin diagnóstico"
+   │   └── Botón: "Registrar Alta"
+   │
+   ├── Si SEGUIMIENTO seleccionado:
+   │   ├── Autocomplete: Diagnóstico CIE-10 (obligatorio)
+   │   ├── Select: Frecuencia (obligatorio)
+   │   ├── Select: Tipo de Sesión (obligatorio)
+   │   ├── Textarea: Detalle del plan (opcional)
+   │   ├── DatePicker: Próximo seguimiento (recomendado)
+   │   └── Botón: "Registrar Seguimiento"
+   │
+   └── Si TRANSFERENCIA seleccionado:
+       ├── Autocomplete: Diagnóstico CIE-10 (obligatorio)
+       ├── Input text: Unidad destino (obligatorio)
+       ├── Textarea: Observaciones (recomendado)
+       └── Botón: "Registrar Transferencia"
+
+2. VALIDACIÓN
+   └── Validar campos según condición seleccionada
+   └── Mostrar errores en tiempo real
+
+3. CONFIRMACIÓN
+   └── Modal de confirmación antes de enviar
+   └── Mostrar resumen de lo que se va a registrar
+
+4. ENVÍO
+   └── PUT a /gestion/api/fichas-psicologicas/{id}/condicion
+   └── Mostrar loading mientras procesa
+
+5. RESPUESTA
+   ├── Si OK: Mostrar mensaje de éxito y redirigir
+   └── Si ERROR: Mostrar mensaje de error específico
+
+================================================================================
+PREGUNTAS FRECUENTES
+================================================================================
+
+P: ¿Puedo cambiar de Seguimiento a Alta?
+R: Sí, simplemente envía condicion: "Alta" y el sistema limpiará el plan.
+
+P: ¿Puedo cambiar de Transferencia a Seguimiento?
+R: Sí, envía la condición Seguimiento con todos los campos requeridos.
+
+P: ¿Qué pasa si envío campos extra que no corresponden?
+R: El backend los ignora. Por ejemplo, si envías transferenciaUnidad en Alta,
+   se ignora sin causar error.
+
+P: ¿El código CIE-10 se valida contra el catálogo?
+R: Sí, debe existir en el catálogo de diagnósticos.
+
+P: ¿Puedo registrar una condición sin tener token?
+R: No, todas las operaciones requieren autenticación Bearer token.
+
+P: ¿Los psicólogos pueden cambiar condiciones de otros psicólogos?
+R: Depende de la configuración de seguridad, pero generalmente cada psicólogo
+   maneja sus propias fichas.
+
+P: ¿Se puede tener plan de seguimiento en Transferencia?
+R: Sí, es opcional. Se puede recomendar un plan para la unidad receptora.
+
+================================================================================
+FIN DEL DOCUMENTO
+================================================================================

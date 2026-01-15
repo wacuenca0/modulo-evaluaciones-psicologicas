@@ -1,0 +1,96 @@
+================================================================================
+REPORTE: ATENCIONES POR PSICÓLOGOS
+================================================================================
+
+DESCRIPCIÓN:
+Este reporte muestra estadísticas consolidadas de las atenciones realizadas por
+cada psicólogo, incluyendo fichas activas, observación, seguimientos y personas
+atendidas.
+
+URL:
+GET /gestion/api/reportes/atenciones-psicologos
+
+MÉTODO: GET
+
+AUTENTICACIÓN: 
+Requiere token Bearer y rol ADMINISTRADOR o PSICOLOGO
+
+PARÁMETROS DE CONSULTA (Query Params - todos opcionales):
+{
+  "psicologoId": 123,                    // ID del psicólogo específico
+  "fechaDesde": "2026-01-01",            // Formato: YYYY-MM-DD
+  "fechaHasta": "2026-01-31",            // Formato: YYYY-MM-DD
+  "diagnosticoId": 456,                  // ID del diagnóstico CIE-10
+  "cedula": "1234567890",                // Cédula del personal militar
+  "unidadMilitar": "Nombre de Unidad"    // Nombre de la unidad militar
+}
+
+EJEMPLO DE URL COMPLETA:
+/gestion/api/reportes/atenciones-psicologos?psicologoId=1&fechaDesde=2026-01-01&fechaHasta=2026-01-31
+
+RESPUESTA JSON (200 OK):
+[
+  {
+    "psicologoId": 1,
+    "psicologoNombre": "Dr. Juan Pérez",
+    "psicologoUsername": "jperez",
+    "psicologoUnidadMilitar": "Hospital Militar Central",
+    "totalFichas": 45,
+    "fichasActivas": 30,
+    "fichasObservacion": 10,
+    "totalSeguimientos": 25,
+    "personasAtendidas": 40,
+    "ultimaAtencion": "2026-01-30",
+    "filtroDiagnosticoId": null,
+    "filtroDiagnosticoCodigo": null,
+    "filtroDiagnosticoTexto": null,
+    "filtroCedula": null,
+    "filtroUnidadMilitar": null,
+    "filtroFechaDesde": "2026-01-01",
+    "filtroFechaHasta": "2026-01-31"
+  },
+  {
+    "psicologoId": 2,
+    "psicologoNombre": "Dra. María López",
+    "psicologoUsername": "mlopez",
+    "psicologoUnidadMilitar": "Base Aérea Quito",
+    "totalFichas": 38,
+    "fichasActivas": 25,
+    "fichasObservacion": 8,
+    "totalSeguimientos": 20,
+    "personasAtendidas": 35,
+    "ultimaAtencion": "2026-01-29",
+    "filtroDiagnosticoId": null,
+    "filtroDiagnosticoCodigo": null,
+    "filtroDiagnosticoTexto": null,
+    "filtroCedula": null,
+    "filtroUnidadMilitar": null,
+    "filtroFechaDesde": "2026-01-01",
+    "filtroFechaHasta": "2026-01-31"
+  }
+]
+
+CAMPOS DE LA RESPUESTA:
+- psicologoId: Identificador único del psicólogo
+- psicologoNombre: Nombre completo del psicólogo
+- psicologoUsername: Usuario del psicólogo en el sistema
+- psicologoUnidadMilitar: Unidad militar donde trabaja
+- totalFichas: Total de fichas psicológicas creadas
+- fichasActivas: Fichas en estado Activa
+- fichasObservacion: Fichas en estado Observación
+- totalSeguimientos: Total de seguimientos psicológicos registrados
+- personasAtendidas: Cantidad de personas diferentes atendidas
+- ultimaAtencion: Fecha de la última atención registrada
+- filtro*: Campos que reflejan los filtros aplicados en la consulta
+
+CASOS DE USO:
+1. Ver productividad de todos los psicólogos en un periodo
+2. Evaluar carga de trabajo de un psicólogo específico
+3. Filtrar atenciones por diagnóstico específico
+4. Consultar atenciones de una unidad militar
+5. Auditar atenciones de un paciente específico (por cédula)
+
+NOTAS:
+- Si no se envían filtros, retorna estadísticas de todos los psicólogos
+- Los contadores son acumulativos según los filtros aplicados
+- La fecha de última atención ayuda a identificar psicólogos activos

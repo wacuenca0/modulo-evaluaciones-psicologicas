@@ -1,0 +1,113 @@
+================================================================================
+REPORTE: CONDICIÓN SEGUIMIENTO Y TRANSFERENCIA
+================================================================================
+
+DESCRIPCIÓN:
+Este reporte lista a todas las personas que se encuentran actualmente en 
+condición de Seguimiento o Transferencia, con información detallada sobre
+su última evaluación, próximas citas y datos de transferencia.
+
+URL:
+GET /gestion/api/reportes/condicion-seguimiento
+
+MÉTODO: GET
+
+AUTENTICACIÓN: 
+Requiere token Bearer y rol ADMINISTRADOR o PSICOLOGO
+
+PARÁMETROS DE CONSULTA (Query Params - todos opcionales):
+{
+  "psicologoId": 123,                    // ID del psicólogo responsable
+  "fechaDesde": "2026-01-01",            // Formato: YYYY-MM-DD
+  "fechaHasta": "2026-01-31",            // Formato: YYYY-MM-DD
+  "cedula": "1234567890",                // Cédula del personal militar
+  "unidadMilitar": "Nombre de Unidad"    // Nombre de la unidad militar
+}
+
+EJEMPLO DE URL COMPLETA:
+/gestion/api/reportes/condicion-seguimiento?psicologoId=1&fechaDesde=2026-01-01
+
+RESPUESTA JSON (200 OK):
+[
+  {
+    "personalMilitarId": 105,
+    "personalMilitarNombre": "Sargento Carlos Mendoza",
+    "personalMilitarCedula": "1234567890",
+    "fichaId": 234,
+    "numeroEvaluacion": "EV-2026-00234",
+    "condicionClinica": "SEGUIMIENTO",
+    "condicionClinicaCanonical": "Seguimiento (Requiere citas periodicas)",
+    "psicologoId": 1,
+    "psicologoNombre": "Dr. Juan Pérez",
+    "psicologoUnidadMilitar": "Hospital Militar Central",
+    "totalSeguimientos": 3,
+    "ultimaFechaSeguimiento": "2026-01-25",
+    "proximoSeguimiento": "2026-02-25",
+    "fechaTransferencia": null,
+    "unidadTransferencia": null,
+    "observacionTransferencia": null,
+    "fechaEvaluacion": "2025-12-15",
+    "filtroCedula": null,
+    "filtroUnidadMilitar": null,
+    "filtroFechaDesde": "2026-01-01",
+    "filtroFechaHasta": null
+  },
+  {
+    "personalMilitarId": 106,
+    "personalMilitarNombre": "Teniente Ana Rodríguez",
+    "personalMilitarCedula": "0987654321",
+    "fichaId": 235,
+    "numeroEvaluacion": "EV-2026-00235",
+    "condicionClinica": "TRANSFERENCIA",
+    "condicionClinicaCanonical": "Transferencia (Derivado a otro especialista o unidad)",
+    "psicologoId": 1,
+    "psicologoNombre": "Dr. Juan Pérez",
+    "psicologoUnidadMilitar": "Hospital Militar Central",
+    "totalSeguimientos": 1,
+    "ultimaFechaSeguimiento": "2026-01-20",
+    "proximoSeguimiento": null,
+    "fechaTransferencia": "2026-01-20",
+    "unidadTransferencia": "Centro Psiquiátrico Militar",
+    "observacionTransferencia": "Requiere atención psiquiátrica especializada",
+    "fechaEvaluacion": "2026-01-10",
+    "filtroCedula": null,
+    "filtroUnidadMilitar": null,
+    "filtroFechaDesde": "2026-01-01",
+    "filtroFechaHasta": null
+  }
+]
+
+CAMPOS DE LA RESPUESTA:
+- personalMilitarId: ID del personal militar
+- personalMilitarNombre: Nombre completo del personal
+- personalMilitarCedula: Cédula de identidad
+- fichaId: ID de la ficha psicológica activa
+- numeroEvaluacion: Número único de evaluación
+- condicionClinica: Enum de condición (SEGUIMIENTO o TRANSFERENCIA)
+- condicionClinicaCanonical: Descripción completa de la condición
+- psicologoId: ID del psicólogo responsable
+- psicologoNombre: Nombre del psicólogo
+- psicologoUnidadMilitar: Unidad del psicólogo
+- totalSeguimientos: Cantidad de seguimientos realizados
+- ultimaFechaSeguimiento: Fecha del último seguimiento
+- proximoSeguimiento: Fecha programada del próximo seguimiento (solo SEGUIMIENTO)
+- fechaTransferencia: Fecha de transferencia (solo TRANSFERENCIA)
+- unidadTransferencia: Unidad destino (solo TRANSFERENCIA)
+- observacionTransferencia: Observaciones de la transferencia
+- fechaEvaluacion: Fecha de evaluación inicial de la ficha
+- filtro*: Campos que reflejan los filtros aplicados
+
+CASOS DE USO:
+1. Listar todas las personas en seguimiento activo
+2. Identificar personas que requieren próxima cita de seguimiento
+3. Consultar transferencias realizadas a otras unidades
+4. Seguimiento de carga de trabajo por psicólogo
+5. Filtrar por unidad militar específica
+6. Buscar el estado de un paciente por cédula
+
+NOTAS:
+- Solo incluye fichas con condición SEGUIMIENTO o TRANSFERENCIA
+- El campo proximoSeguimiento solo aplica para condición SEGUIMIENTO
+- Los campos de transferencia (fecha, unidad, observación) solo se llenan 
+  cuando la condición es TRANSFERENCIA
+- Útil para agendar controles y hacer seguimiento de derivaciones

@@ -72,6 +72,10 @@ public class PersonalMilitarUpsertRequestDTO {
     @JsonAlias({"especialidad"})
     private String especialidad;
 
+    @Size(max = 150, message = "La unidad militar no debe superar 150 caracteres")
+    @JsonAlias({"unidad", "unidad_militar"})
+    private String unidadMilitar;
+
     @Size(max = 100, message = "La provincia no debe superar 100 caracteres")
     @JsonAlias({"provincia"})
     private String provincia;
@@ -233,6 +237,14 @@ public class PersonalMilitarUpsertRequestDTO {
 
     public void setEspecialidad(String especialidad) {
         this.especialidad = especialidad;
+    }
+
+    public String getUnidadMilitar() {
+        return unidadMilitar;
+    }
+
+    public void setUnidadMilitar(String unidadMilitar) {
+        this.unidadMilitar = unidadMilitar;
     }
 
     public String getProvincia() {

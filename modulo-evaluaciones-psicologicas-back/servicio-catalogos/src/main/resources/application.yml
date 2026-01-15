@@ -19,7 +19,6 @@ security:
   roles:
     admin: ADMINISTRADOR
     psychologist: PSICOLOGO
-    catalog: CATALOGOS_CIE10
   jwt:
     secret: ${JWT_SECRET:cambia-esta-clave-super-segura-de-32+caracteres-2025}
     issuer: ${JWT_ISSUER:modulo-evaluaciones-psicologicas}

@@ -7,6 +7,7 @@ import ec.mil.dsndft.servicio_gestion.entity.SeguimientoPsicologico;
 import ec.mil.dsndft.servicio_gestion.model.dto.SeguimientoPsicologicoDTO;
 import ec.mil.dsndft.servicio_gestion.model.enums.CondicionClinicaEnum;
 import ec.mil.dsndft.servicio_gestion.model.enums.EstadoFichaEnum;
+import ec.mil.dsndft.servicio_gestion.model.value.TransferenciaInfo;
 import org.springframework.stereotype.Component;
 
 import java.util.Collections;
@@ -34,6 +35,33 @@ public class SeguimientoPsicologicoMapper {
             dto.setFichaPsicologicaId(ficha.getId());
             dto.setEstadoFicha(mapEstado(ficha.getEstado()));
             dto.setCondicionFicha(mapCondicion(ficha.getCondicionClinica()));
+            if (ficha.getDiagnosticoCie10Catalogo() != null) {
+                dto.setDiagnosticoCie10Id(ficha.getDiagnosticoCie10Catalogo().getId());
+            }
+            if (ficha.getDiagnosticoCie10() != null) {
+                dto.setDiagnosticoCie10Codigo(ficha.getDiagnosticoCie10().getCodigo());
+                dto.setDiagnosticoCie10Nombre(ficha.getDiagnosticoCie10().getNombre());
+                dto.setDiagnosticoCie10CategoriaPadre(ficha.getDiagnosticoCie10().getCategoriaPadre());
+                dto.setDiagnosticoCie10Nivel(ficha.getDiagnosticoCie10().getNivel());
+                dto.setDiagnosticoCie10Descripcion(ficha.getDiagnosticoCie10().getDescripcion());
+            }
+            if (ficha.getPlanSeguimiento() != null) {
+                dto.setPlanFrecuencia(ficha.getPlanSeguimiento().getFrecuencia() != null
+                        ? ficha.getPlanSeguimiento().getFrecuencia().getCanonical()
+                        : null);
+                dto.setPlanTipoSesion(ficha.getPlanSeguimiento().getTipoSesion() != null
+                        ? ficha.getPlanSeguimiento().getTipoSesion().getCanonical()
+                        : null);
+                dto.setPlanDetalle(ficha.getPlanSeguimiento().getDetalle());
+            }
+            dto.setUltimaFechaSeguimiento(ficha.getUltimaFechaSeguimiento());
+            dto.setProximoSeguimiento(ficha.getProximoSeguimiento());
+            TransferenciaInfo transferencia = ficha.getTransferenciaInfo();
+            if (transferencia != null) {
+                dto.setTransferenciaFecha(transferencia.getFechaTransferencia());
+                dto.setTransferenciaUnidad(transferencia.getUnidadDestino());
+                dto.setTransferenciaObservacion(transferencia.getObservacion());
+            }
 
             PersonalMilitar personalMilitar = ficha.getPersonalMilitar();
             if (personalMilitar != null) {

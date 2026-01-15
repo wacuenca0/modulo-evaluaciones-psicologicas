@@ -7,6 +7,7 @@ import org.springframework.data.repository.query.Param;
 
 import java.time.LocalDate;
 import java.util.List;
+import java.util.Optional;
 
 public interface SeguimientoPsicologicoRepository extends JpaRepository<SeguimientoPsicologico, Long> {
 		@Query("SELECT s FROM SeguimientoPsicologico s " +
@@ -23,4 +24,8 @@ public interface SeguimientoPsicologicoRepository extends JpaRepository<Seguimie
 																							 @Param("fechaHasta") LocalDate fechaHasta);
 
 		List<SeguimientoPsicologico> findByFichaPsicologicaIdOrderByFechaSeguimientoAsc(Long fichaPsicologicaId);
+
+					long countByFichaPsicologicaId(Long fichaPsicologicaId);
+
+		Optional<SeguimientoPsicologico> findTopByFichaPsicologicaIdOrderByFechaSeguimientoDescIdDesc(Long fichaPsicologicaId);
 }

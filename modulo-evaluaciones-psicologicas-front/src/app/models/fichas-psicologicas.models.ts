@@ -16,11 +16,27 @@ export interface FichaPsicologicaHistorialDTO {
   seccionPrenatal?: FichaPsicoanamnesisPrenatalDTO;
   seccionNatal?: FichaPsicoanamnesisNatalDTO;
   seccionInfancia?: FichaPsicoanamnesisInfanciaDTO;
+  diagnosticoCie10Id?: number | null;
   diagnosticoCie10Codigo?: string | null;
+  diagnosticoCie10Nombre?: string | null;
   diagnosticoCie10Descripcion?: string | null;
+  diagnosticoCie10CategoriaPadre?: string | null;
+  diagnosticoCie10Nivel?: number | null;
   planFrecuencia?: string | null;
   planTipoSesion?: string | null;
   planDetalle?: string | null;
+  ultimaFechaSeguimiento?: string | null;
+  proximoSeguimiento?: string | null;
+  transferenciaFecha?: string | null;
+  transferenciaUnidad?: string | null;
+  transferenciaObservacion?: string | null;
+  creadoPorId?: number | null;
+  creadoPorNombre?: string | null;
+  creadoPorUsername?: string | null;
+  actualizadoPorId?: number | null;
+  actualizadoPorNombre?: string | null;
+  actualizadoPorUsername?: string | null;
+  updatedAt?: string | null;
 }
 
 export interface FichaPsicologicaCreacionInicialDTO {
@@ -33,13 +49,41 @@ export interface FichaPsicologicaCreacionInicialDTO {
 export interface FichaObservacionClinicaDTO {
   observacionClinica?: string;
   motivoConsulta?: string;
-  enfermedadActual?: string;
+  enfermedadActual?: string | null;
+  historiaPasadaEnfermedad?: FichaHistoriaPasadaEnfermedadDTO | null;
 }
 
 export interface FichaObservacionClinicaPayload {
   observacionClinica: string;
   motivoConsulta: string;
-  enfermedadActual?: string;
+  enfermedadActual?: string | null;
+  historiaPasadaEnfermedad?: FichaHistoriaPasadaEnfermedadPayload;
+}
+
+export interface FichaHistoriaPasadaEnfermedadDTO {
+  descripcion?: string | null;
+  tomaMedicacion?: boolean | null;
+  tipoMedicacion?: string | null;
+  hospitalizacionRehabilitacion?: FichaHospitalizacionRehabilitacionDTO | null;
+}
+
+export interface FichaHistoriaPasadaEnfermedadPayload {
+  descripcion?: string | null;
+  tomaMedicacion?: boolean | null;
+  tipoMedicacion?: string | null;
+  hospitalizacionRehabilitacion?: FichaHospitalizacionRehabilitacionPayload;
+}
+
+export interface FichaHospitalizacionRehabilitacionDTO {
+  requiere?: boolean | null;
+  tipo?: string | null;
+  duracion?: string | null;
+}
+
+export interface FichaHospitalizacionRehabilitacionPayload {
+  requiere?: boolean | null;
+  tipo?: string | null;
+  duracion?: string | null;
 }
 
 export interface FichaPsicoanamnesisDTO {
@@ -102,20 +146,36 @@ export interface FichaPsicoanamnesisInfanciaPayload {
 
 export interface FichaCondicionClinicaDTO {
   condicion?: string | null;
+  diagnosticoCie10Id?: number | null;
   diagnosticoCie10Codigo?: string | null;
+  diagnosticoCie10Nombre?: string | null;
   diagnosticoCie10Descripcion?: string | null;
+  diagnosticoCie10CategoriaPadre?: string | null;
+  diagnosticoCie10Nivel?: number | null;
   planFrecuencia?: string | null;
   planTipoSesion?: string | null;
   planDetalle?: string | null;
+  proximoSeguimiento?: string | null;
+  ultimaFechaSeguimiento?: string | null;
+  transferenciaFecha?: string | null;
+  transferenciaUnidad?: string | null;
+  transferenciaObservacion?: string | null;
 }
 
 export interface FichaCondicionClinicaPayload {
-  condicion: string;
+  condicion: FichaCondicionFinal | string;
+  diagnosticoCie10Id?: number | null;
   diagnosticoCie10Codigo?: string | null;
+  diagnosticoCie10Nombre?: string | null;
   diagnosticoCie10Descripcion?: string | null;
-  planFrecuencia?: string | null;
-  planTipoSesion?: string | null;
+  diagnosticoCie10CategoriaPadre?: string | null;
+  diagnosticoCie10Nivel?: number | null;
+  planFrecuencia?: FichaPlanFrecuencia | null;
+  planTipoSesion?: FichaPlanTipoSesion | null;
   planDetalle?: string | null;
+  proximoSeguimiento?: string | null;
+  transferenciaUnidad?: string | null;
+  transferenciaObservacion?: string | null;
 }
 
 export const FICHA_TIPOS_EVALUACION_CANONICOS: ReadonlyArray<{ value: string; label: string }> = [
@@ -198,24 +258,40 @@ export const FICHA_CONDICION_CLINICA_OPCIONES: ReadonlyArray<{ value: FichaCondi
 
 export interface FichaCondicionFinalPayload {
   condicion: FichaCondicionFinal;
-  cie10Codigo?: string;
-  cie10Descripcion?: string;
+  diagnosticoCie10Id?: number | null;
+  diagnosticoCie10Codigo?: string | null;
+  diagnosticoCie10Nombre?: string | null;
+  diagnosticoCie10Descripcion?: string | null;
+  diagnosticoCie10CategoriaPadre?: string | null;
+  diagnosticoCie10Nivel?: number | null;
+  planFrecuencia?: FichaPlanFrecuencia | null;
+  planTipoSesion?: FichaPlanTipoSesion | null;
+  planDetalle?: string | null;
+  proximoSeguimiento?: string | null;
+  transferenciaUnidad?: string | null;
+  transferenciaObservacion?: string | null;
 }
 
-export const FICHA_PLAN_FRECUENCIAS: ReadonlyArray<{ value: string; label: string }> = [
-  { value: 'Semanal', label: 'Semanal' },
-  { value: 'Quincenal', label: 'Quincenal' },
-  { value: 'Mensual', label: 'Mensual' },
-  { value: 'Bimestral', label: 'Bimestral' },
-  { value: 'Trimestral', label: 'Trimestral' },
-  { value: 'Personalizada', label: 'Personalizada' }
+export type FichaPlanFrecuencia = 'SEMANAL' | 'QUINCENAL' | 'MENSUAL' | 'BIMESTRAL' | 'TRIMESTRAL' | 'PERSONALIZADA';
+
+export type FichaPlanTipoSesion = 'INDIVIDUAL' | 'GRUPAL' | 'FAMILIAR' | 'PAREJA' | 'REMOTA' | 'MIXTA';
+
+export const FICHA_PLAN_FRECUENCIAS: ReadonlyArray<{ value: FichaPlanFrecuencia; label: string }> = [
+  { value: 'SEMANAL', label: 'Semanal' },
+  { value: 'QUINCENAL', label: 'Quincenal' },
+  { value: 'MENSUAL', label: 'Mensual' },
+  { value: 'BIMESTRAL', label: 'Bimestral' },
+  { value: 'TRIMESTRAL', label: 'Trimestral' },
+  { value: 'PERSONALIZADA', label: 'Personalizada' }
 ];
 
-export const FICHA_PLAN_TIPOS_SESION: ReadonlyArray<{ value: string; label: string }> = [
-  { value: 'Individual', label: 'Individual' },
-  { value: 'Grupal', label: 'Grupal' },
-  { value: 'Mixta', label: 'Mixta' },
-  { value: 'Familiar', label: 'Familiar' }
+export const FICHA_PLAN_TIPOS_SESION: ReadonlyArray<{ value: FichaPlanTipoSesion; label: string }> = [
+  { value: 'INDIVIDUAL', label: 'Individual' },
+  { value: 'GRUPAL', label: 'Grupal' },
+  { value: 'FAMILIAR', label: 'Familiar' },
+  { value: 'PAREJA', label: 'Pareja' },
+  { value: 'REMOTA', label: 'Remota' },
+  { value: 'MIXTA', label: 'Mixta' }
 ];
 
 export const FICHA_CONDICION_FINAL_OPCIONES: ReadonlyArray<{ value: FichaCondicionFinal; label: string; description: string }> = FICHA_CONDICION_CLINICA_OPCIONES;

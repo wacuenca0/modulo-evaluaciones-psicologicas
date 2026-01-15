@@ -2,31 +2,25 @@ import { ChangeDetectionStrategy, Component, DestroyRef, computed, effect, injec
 import { CommonModule } from '@angular/common';
 import { NonNullableFormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
-import { catchError, finalize, map } from 'rxjs/operators';
+import { catchError, finalize } from 'rxjs/operators';
 import { of } from 'rxjs';
 import { ReportesService } from '../../services/reportes.service';
-import { ReporteAtencionPsicologoDTO } from '../../models/reportes.models';
-import { UserService } from '../../services/user.service';
+import {
+  ReporteAtencionPsicologoDTO,
+  ReporteAtencionesAppliedFilters,
+  ReporteAtencionesFilters,
+  ReporteAtencionesResponse,
+  ReporteAtencionesTotales
+} from '../../models/reportes.models';
+import { PsicologosLookupService, PsicologoOption } from '../shared/psicologos-lookup.service';
 import { AuthService } from '../../services/auth.service';
-import { UserDTO } from '../../models/auth.models';
-
-interface PsicologoOption {
-  id: number;
-  nombre: string;
-  username: string;
-}
-
-interface ReporteTotales {
-  fichas: number;
-  activas: number;
-  observacion: number;
-  seguimientos: number;
-  personas: number;
-}
+import { Cie10LookupComponent } from '../shared/cie10-lookup.component';
+import { CatalogoCIE10DTO } from '../../models/catalogo.models';
+import { Cie10CacheService } from '../shared/cie10-cache.service';
 
 @Component({
   selector: 'app-atenciones-psicologos-report',
-  imports: [CommonModule, ReactiveFormsModule],
+  imports: [CommonModule, ReactiveFormsModule, Cie10LookupComponent],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     <section class="space-y-8">
@@ -67,8 +61,16 @@ interface ReporteTotales {
             <input type="date" formControlName="fechaHasta" class="mt-1 w-full rounded-md border border-slate-300 px-3 py-2 text-sm focus:border-slate-900 focus:outline-none focus:ring" />
           </label>
           <label class="text-xs font-semibold uppercase tracking-wide text-slate-500">
-            Diagnostico (CIE10)
-            <input type="text" maxlength="20" formControlName="diagnosticoCodigo" class="mt-1 w-full rounded-md border border-slate-300 px-3 py-2 text-sm uppercase tracking-wide focus:border-slate-900 focus:outline-none focus:ring" placeholder="Ej. F41.1" />
+            Diagnóstico CIE-10
+            <app-cie10-lookup
+              formControlName="diagnosticoId"
+              [helperText]="'Escribe al menos 3 caracteres para buscar en el catálogo.'"
+              (selectionChange)="onDiagnosticoSelectionChange($event)"
+            />
+          </label>
+          <label class="text-xs font-semibold uppercase tracking-wide text-slate-500">
+            Cédula
+            <input type="text" maxlength="20" formControlName="cedula" class="mt-1 w-full rounded-md border border-slate-300 px-3 py-2 text-sm uppercase tracking-wide focus:border-slate-900 focus:outline-none focus:ring" placeholder="Ej. 0912345678" />
           </label>
           <label class="text-xs font-semibold uppercase tracking-wide text-slate-500 md:col-span-2 xl:col-span-1">
             Unidad militar
@@ -121,6 +123,16 @@ interface ReporteTotales {
               </article>
             </div>
 
+            @if (filtrosResumen().length) {
+              <div class="flex flex-wrap gap-2 rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-xs text-slate-600">
+                @for (filtro of filtrosResumen(); track filtro.etiqueta) {
+                  <span class="rounded-full bg-white px-3 py-1 shadow-sm">
+                    <span class="font-semibold text-slate-700">{{ filtro.etiqueta }}:</span> {{ filtro.valor }}
+                  </span>
+                }
+              </div>
+            }
+
             <div class="overflow-x-auto">
               <table class="w-full min-w-[760px] divide-y divide-slate-200 text-sm">
                 <thead>
@@ -161,43 +173,98 @@ interface ReporteTotales {
 export class AtencionesPsicologosReportComponent {
   private readonly fb = inject(NonNullableFormBuilder);
   private readonly reportesService = inject(ReportesService);
-  private readonly userService = inject(UserService);
+  private readonly psicologosLookup = inject(PsicologosLookupService);
   private readonly auth = inject(AuthService);
+  private readonly cie10Cache = inject(Cie10CacheService);
   private readonly destroyRef = inject(DestroyRef);
 
   readonly form = this.fb.group({
     psicologoId: this.fb.control(''),
     fechaDesde: this.fb.control(''),
     fechaHasta: this.fb.control(''),
-    diagnosticoCodigo: this.fb.control('', { validators: [Validators.maxLength(20)] }),
+    diagnosticoId: this.fb.control(''),
+    cedula: this.fb.control('', { validators: [Validators.maxLength(20)] }),
     unidadMilitar: this.fb.control('', { validators: [Validators.maxLength(120)] })
   });
 
   readonly loading = signal(false);
   readonly error = signal<string | null>(null);
   readonly resultados = signal<ReporteAtencionPsicologoDTO[]>([]);
+  readonly totales = signal<ReporteAtencionesTotales>(this.createTotales());
   readonly psicologos = signal<PsicologoOption[]>([]);
   readonly psicologosCargando = signal(false);
   readonly busquedaEjecutada = signal(false);
   readonly psicologoForzado = signal<string | null>(null);
+  readonly filtrosAplicados = signal<ReporteAtencionesAppliedFilters | null>(null);
+  readonly diagnosticoSeleccionado = signal<CatalogoCIE10DTO | null>(null);
+  readonly diagnosticoEtiqueta = computed(() => {
+    const seleccionado = this.diagnosticoSeleccionado();
+    if (!seleccionado) {
+      return null;
+    }
+    const codigo = seleccionado.codigo?.trim() ?? '';
+    const descripcion = seleccionado.descripcion?.trim() ?? '';
+    if (codigo && descripcion) {
+      return `${codigo} · ${descripcion}`;
+    }
+    return codigo || descripcion || null;
+  });
+
+  readonly filtrosResumen = computed(() => {
+    const filtros = this.filtrosAplicados();
+    if (!filtros) {
+      return [] as { etiqueta: string; valor: string }[];
+    }
+    const resumen: { etiqueta: string; valor: string }[] = [];
+    if (filtros.psicologoId !== null && filtros.psicologoId !== undefined) {
+      const psicologo = this.psicologos().find(opcion => opcion.id === filtros.psicologoId);
+      if (psicologo) {
+        resumen.push({ etiqueta: 'Psicólogo', valor: psicologo.nombre });
+      } else {
+        resumen.push({ etiqueta: 'Psicólogo', valor: String(filtros.psicologoId) });
+      }
+    }
+    if (filtros.fechaDesde) {
+      resumen.push({ etiqueta: 'Fecha desde', valor: filtros.fechaDesde });
+    }
+    if (filtros.fechaHasta) {
+      resumen.push({ etiqueta: 'Fecha hasta', valor: filtros.fechaHasta });
+    }
+    if (filtros.diagnosticoId !== null && filtros.diagnosticoId !== undefined) {
+      const etiqueta = this.diagnosticoEtiqueta();
+      resumen.push({ etiqueta: 'Diagnóstico', valor: etiqueta ?? `ID ${filtros.diagnosticoId}` });
+    }
+    if (filtros.cedula) {
+      resumen.push({ etiqueta: 'Cédula', valor: filtros.cedula });
+    }
+    if (filtros.unidadMilitar) {
+      resumen.push({ etiqueta: 'Unidad militar', valor: filtros.unidadMilitar });
+    }
+    return resumen;
+  });
 
   private readonly dateFormatter = new Intl.DateTimeFormat('es-EC', { dateStyle: 'medium', timeStyle: 'short' });
   private readonly isInitialized = signal(false);
 
   readonly sinResultados = computed(() => !this.error() && !this.resultados().length);
-  readonly totales = computed<ReporteTotales>(() => {
-    const data = this.resultados();
-    return data.reduce<ReporteTotales>((acc, fila) => ({
-      fichas: acc.fichas + this.asNumber(fila.totalFichas),
-      activas: acc.activas + this.asNumber(fila.fichasActivas),
-      observacion: acc.observacion + this.asNumber(fila.fichasObservacion),
-      seguimientos: acc.seguimientos + this.asNumber(fila.totalSeguimientos),
-      personas: acc.personas + this.asNumber(fila.personasAtendidas)
-    }), { fichas: 0, activas: 0, observacion: 0, seguimientos: 0, personas: 0 });
-  });
+  private createTotales(): ReporteAtencionesTotales {
+    return { fichas: 0, activas: 0, observacion: 0, seguimientos: 0, personas: 0 };
+  }
+
+  private toAppliedFilters(filtros: ReporteAtencionesFilters): ReporteAtencionesAppliedFilters {
+    return {
+      psicologoId: typeof filtros.psicologoId === 'number' && Number.isFinite(filtros.psicologoId) ? filtros.psicologoId : null,
+      fechaDesde: filtros.fechaDesde ?? null,
+      fechaHasta: filtros.fechaHasta ?? null,
+      diagnosticoId: filtros.diagnosticoId ?? null,
+      cedula: filtros.cedula ?? null,
+      unidadMilitar: filtros.unidadMilitar ?? null
+    };
+  }
 
   constructor() {
     this.cargarPsicologos();
+    this.syncDiagnosticoDesdeFiltros();
 
     effect(() => {
       const esPsicologo = this.auth.isPsicologo();
@@ -241,7 +308,9 @@ export class AtencionesPsicologosReportComponent {
       return;
     }
 
-    const diagnostico = raw.diagnosticoCodigo.trim().toUpperCase();
+    const diagnosticoValor = raw.diagnosticoId.trim();
+    const diagnosticoId = diagnosticoValor.length ? Number(diagnosticoValor) : null;
+    const cedula = raw.cedula.trim().toUpperCase();
     const unidad = raw.unidadMilitar.trim();
     const psicologoVal = raw.psicologoId.trim();
     const psicologoId = psicologoVal.length ? Number(psicologoVal) : null;
@@ -249,25 +318,47 @@ export class AtencionesPsicologosReportComponent {
     this.error.set(null);
     this.loading.set(true);
 
-    this.reportesService.obtenerAtencionesPorPsicologos({
+    const filtrosConsulta: ReporteAtencionesFilters = {
       psicologoId: Number.isFinite(psicologoId) ? psicologoId : undefined,
       fechaDesde: fechaDesde || undefined,
       fechaHasta: fechaHasta || undefined,
-      diagnosticoCodigo: diagnostico || undefined,
+      diagnosticoId: Number.isFinite(diagnosticoId) ? diagnosticoId : undefined,
+      cedula: cedula || undefined,
       unidadMilitar: unidad || undefined
-    }).pipe(
+    };
+
+    this.reportesService.obtenerAtencionesPorPsicologos(filtrosConsulta).pipe(
       takeUntilDestroyed(this.destroyRef),
       finalize(() => {
         this.loading.set(false);
         this.busquedaEjecutada.set(true);
       }),
-      catchError(err => {
+      catchError(() => {
+        const totalesVacios = this.createTotales();
+        const filtrosAplicados = this.toAppliedFilters(filtrosConsulta);
         this.error.set('No fue posible obtener el reporte. Intenta nuevamente.');
         this.resultados.set([]);
-        return of<ReporteAtencionPsicologoDTO[]>([]);
+        this.totales.set({ ...totalesVacios });
+        this.filtrosAplicados.set(filtrosAplicados);
+        return of<ReporteAtencionesResponse>({ resultados: [], totales: { ...totalesVacios }, filtros: filtrosAplicados });
       })
     ).subscribe(res => {
-      this.resultados.set(Array.isArray(res) ? res : []);
+      if (!res) {
+        this.resultados.set([]);
+        this.totales.set(this.createTotales());
+        this.filtrosAplicados.set(this.toAppliedFilters(filtrosConsulta));
+        return;
+      }
+      if (Array.isArray(res)) {
+        this.resultados.set(res);
+        this.totales.set(this.createTotales());
+        this.filtrosAplicados.set(this.toAppliedFilters(filtrosConsulta));
+        return;
+      }
+      this.resultados.set(Array.isArray(res.resultados) ? res.resultados : []);
+      const totales = res.totales ?? this.createTotales();
+      this.totales.set({ ...totales });
+      this.filtrosAplicados.set(res.filtros ?? this.toAppliedFilters(filtrosConsulta));
     });
   }
 
@@ -277,7 +368,8 @@ export class AtencionesPsicologosReportComponent {
       psicologoId: forced ?? '',
       fechaDesde: '',
       fechaHasta: '',
-      diagnosticoCodigo: '',
+      diagnosticoId: '',
+      cedula: '',
       unidadMilitar: ''
     });
     if (forced === null && this.form.controls.psicologoId.disabled) {
@@ -288,7 +380,10 @@ export class AtencionesPsicologosReportComponent {
     }
     this.error.set(null);
     this.resultados.set([]);
+    this.totales.set(this.createTotales());
+    this.filtrosAplicados.set(null);
     this.busquedaEjecutada.set(false);
+    this.diagnosticoSeleccionado.set(null);
     this.buscar();
   }
 
@@ -305,15 +400,11 @@ export class AtencionesPsicologosReportComponent {
 
   private cargarPsicologos() {
     this.psicologosCargando.set(true);
-    this.userService.list().pipe(
+    this.psicologosLookup.obtenerOpciones().pipe(
       takeUntilDestroyed(this.destroyRef),
-      map(users => users.filter(user => Array.isArray(user.roles) && user.roles.includes('ROLE_PSICOLOGO'))),
-      map(lista => lista.map(user => this.buildPsicologoOption(user)).filter((opcion): opcion is PsicologoOption => opcion !== null)),
-      catchError(() => of<PsicologoOption[]>([])),
       finalize(() => this.psicologosCargando.set(false))
     ).subscribe(list => {
-      const ordenado = [...list].sort((a, b) => a.nombre.localeCompare(b.nombre, 'es', { sensitivity: 'base' }));
-      this.psicologos.set(ordenado);
+      this.psicologos.set(list);
     });
   }
 
@@ -331,36 +422,36 @@ export class AtencionesPsicologosReportComponent {
     return null;
   }
 
-  private buildPsicologoOption(user: UserDTO): PsicologoOption | null {
-    const idValue = typeof user.id === 'number' ? user.id : Number(user.id ?? Number.NaN);
-    if (!Number.isFinite(idValue)) {
-      return null;
-    }
-    const username = user.username?.trim();
-    if (!username?.length) {
-      return null;
-    }
-    return {
-      id: Number(idValue),
-      nombre: this.nombreVisible(user),
-      username
-    };
+  onDiagnosticoSelectionChange(opcion: CatalogoCIE10DTO | null) {
+    this.diagnosticoSeleccionado.set(opcion ?? null);
   }
 
-  private nombreVisible(user: UserDTO): string {
-    const username = user.username?.trim() ?? '';
-    const email = user.email?.trim() ?? '';
-    if (username && email) {
-      return `${username} (${email})`;
-    }
-    return username || email || 'Psicologo';
+  private syncDiagnosticoDesdeFiltros() {
+    effect(() => {
+      const applied = this.filtrosAplicados();
+      const diagnosticoId = applied?.diagnosticoId ?? null;
+      const seleccionadoId = this.diagnosticoSeleccionado()?.id ?? null;
+
+      if (diagnosticoId === null) {
+        if (seleccionadoId !== null) {
+          this.diagnosticoSeleccionado.set(null);
+        }
+        return;
+      }
+
+      if (seleccionadoId === diagnosticoId) {
+        return;
+      }
+
+      this.cie10Cache
+        .obtenerPorId(diagnosticoId)
+        .pipe(takeUntilDestroyed(this.destroyRef))
+        .subscribe(item => {
+          if (item && item.id === diagnosticoId) {
+            this.diagnosticoSeleccionado.set(item);
+          }
+        });
+    });
   }
 
-  private asNumber(value: number | null | undefined): number {
-    if (typeof value === 'number' && Number.isFinite(value)) {
-      return value;
-    }
-    const parsed = Number(value ?? Number.NaN);
-    return Number.isFinite(parsed) ? parsed : 0;
-  }
 }

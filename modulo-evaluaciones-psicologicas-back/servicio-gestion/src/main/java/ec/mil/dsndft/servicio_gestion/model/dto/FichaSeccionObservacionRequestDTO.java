@@ -1,6 +1,7 @@
 package ec.mil.dsndft.servicio_gestion.model.dto;
 
 import com.fasterxml.jackson.annotation.JsonAlias;
+import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Size;
 
@@ -17,6 +18,10 @@ public class FichaSeccionObservacionRequestDTO {
     @Size(max = 4000, message = "La enfermedad actual no debe superar 4000 caracteres")
     @JsonAlias({"enfermedad_actual"})
     private String enfermedadActual;
+
+    @Valid
+    @JsonAlias({"historia_pasada_enfermedad"})
+    private HistoriaPasadaEnfermedadRequestDTO historiaPasadaEnfermedad;
 
     public String getObservacionClinica() {
         return observacionClinica;
@@ -40,5 +45,13 @@ public class FichaSeccionObservacionRequestDTO {
 
     public void setEnfermedadActual(String enfermedadActual) {
         this.enfermedadActual = enfermedadActual;
+    }
+
+    public HistoriaPasadaEnfermedadRequestDTO getHistoriaPasadaEnfermedad() {
+        return historiaPasadaEnfermedad;
+    }
+
+    public void setHistoriaPasadaEnfermedad(HistoriaPasadaEnfermedadRequestDTO historiaPasadaEnfermedad) {
+        this.historiaPasadaEnfermedad = historiaPasadaEnfermedad;
     }
 }

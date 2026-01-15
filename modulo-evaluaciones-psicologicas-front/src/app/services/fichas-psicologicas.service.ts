@@ -1,3 +1,4 @@
+// Removed duplicate class and misplaced methods at the top of the file. All methods are now inside the single class definition below.
 import { inject, Injectable } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Observable, map } from 'rxjs';
@@ -13,6 +14,27 @@ import {
 
 @Injectable({ providedIn: 'root' })
 export class FichasPsicologicasService {
+
+    /**
+     * Obtiene el número de ficha de preview (siguiente disponible).
+     */
+    obtenerNumeroPreview(): Observable<{ numeroEvaluacion: string }> {
+      const url = `${this.baseUrl}/fichas-psicologicas/numero-preview`;
+      return this.http.get<{ numeroEvaluacion: string }>(url);
+    }
+
+    /**
+     * Cambia el estado de la ficha por id.
+     */
+    cambiarEstadoFicha(fichaId: number, nuevoEstado: string): Observable<void> {
+      // Solo permitir los estados válidos
+      const estadosValidos = ['Abierta', 'Cerrada', 'Observación'];
+      if (!estadosValidos.includes(nuevoEstado)) {
+        throw new Error('Estado no permitido');
+      }
+      const url = `${this.baseUrl}/fichas-psicologicas/${fichaId}/estado`;
+      return this.http.patch<void>(url, { estado: nuevoEstado });
+    }
   private readonly http = inject(HttpClient);
   private readonly baseUrl = this.resolveBaseUrl();
 
@@ -26,6 +48,12 @@ export class FichasPsicologicasService {
   crearFichaInicial(payload: FichaPsicologicaCreacionInicialDTO): Observable<FichaPsicologicaHistorialDTO> {
     const url = `${this.baseUrl}/fichas-psicologicas`;
     return this.http.post<FichaPsicologicaHistorialDTO>(url, this.toSeccionGeneralPayload(payload));
+  }
+
+  actualizarFichaGeneral(fichaId: number, payload: FichaPsicologicaCreacionInicialDTO): Observable<FichaPsicologicaHistorialDTO> {
+    const id = Number(fichaId);
+    const url = `${this.baseUrl}/fichas-psicologicas/${id}/general`;
+    return this.http.put<FichaPsicologicaHistorialDTO>(url, this.toSeccionGeneralPayload(payload));
   }
 
   obtenerFichaCompleta(fichaId: number): Observable<FichaPsicologicaHistorialDTO> {
@@ -52,20 +80,17 @@ export class FichasPsicologicasService {
     return this.http.put<FichaPsicologicaHistorialDTO>(url, this.toCondicionClinicaPayload(payload));
   }
 
-  registrarCondicionFinal(fichaId: number, payload: FichaCondicionFinalPayload): Observable<void> {
-    const id = Number(fichaId);
-    const url = `${this.baseUrl}/fichas-psicologicas/${id}/condicion-final`;
-    return this.http.post<void>(url, this.toCondicionPayload(payload));
+  registrarCondicionFinal(fichaId: number, payload: FichaCondicionFinalPayload): Observable<FichaPsicologicaHistorialDTO> {
+    return this.actualizarCondicionClinica(Number(fichaId), payload);
   }
 
   private resolveBaseUrl(): string {
-    const nested = (environment as { api?: { gestionBaseUrl?: string } }).api?.gestionBaseUrl;
-    const flat = (environment as { gestionBaseUrl?: string }).gestionBaseUrl;
-    const base = nested || flat || '';
+    // Usar api.baseUrl + '/api' para que apunte a http://localhost:8080/api
+    const base = (environment as { api?: { baseUrl?: string } }).api?.baseUrl || '';
     if (!base) {
       return '/api';
     }
-    return base.replace(/\/$/, '');
+    return `${base}/api`.replace(/\/$/, '');
   }
 
   private toSeccionGeneralPayload(payload: FichaPsicologicaCreacionInicialDTO): Record<string, unknown> {
@@ -87,78 +112,136 @@ export class FichasPsicologicasService {
   }
 
   private toObservacionPayload(payload: FichaObservacionClinicaPayload): Record<string, unknown> {
-    return {
+    const body: Record<string, unknown> = {
       observacion_clinica: this.normalizedRequired(payload.observacionClinica),
-      motivo_consulta: this.normalizedRequired(payload.motivoConsulta),
-      enfermedad_actual: this.normalizedOrUndefined(payload.enfermedadActual)
+      motivo_consulta: this.normalizedRequired(payload.motivoConsulta)
     };
-  }
 
-  private toPsicoanamnesisPayload(payload: FichaPsicoanamnesisPayload): Record<string, unknown> {
-    const body: Record<string, unknown> = {};
-
-    if (payload.prenatal) {
-      const prenatalBody = this.buildSection({
-        condiciones_biologicas_padres: this.normalizedOrNull(payload.prenatal.condicionesBiologicasPadres),
-        condiciones_psicologicas_padres: this.normalizedOrNull(payload.prenatal.condicionesPsicologicasPadres),
-        observacion_prenatal: this.normalizedOrNull(payload.prenatal.observacionPrenatal)
-      });
-      if (prenatalBody) {
-        body['prenatal'] = prenatalBody;
-      }
+    const enfermedad = this.normalizedOrNull(payload.enfermedadActual);
+    if (enfermedad !== undefined) {
+      body['enfermedad_actual'] = enfermedad;
     }
 
-    if (payload.natal) {
-      const natalBody = this.buildSection({
-        parto_normal: payload.natal.partoNormal === undefined ? undefined : payload.natal.partoNormal,
-        termino_parto: this.normalizedOrNull(payload.natal.terminoParto),
-        complicaciones_parto: this.normalizedOrNull(payload.natal.complicacionesParto),
-        observacion_natal: this.normalizedOrNull(payload.natal.observacionNatal)
-      });
-      if (natalBody) {
-        body['natal'] = natalBody;
-      }
-    }
-
-    if (payload.infancia) {
-      const infanciaBody = this.buildSection({
-        grado_sociabilidad: this.normalizedOrNull(payload.infancia.gradoSociabilidad),
-        relacion_padres_hermanos: this.normalizedOrNull(payload.infancia.relacionPadresHermanos),
-        discapacidad_intelectual: payload.infancia.discapacidadIntelectual === undefined ? undefined : payload.infancia.discapacidadIntelectual,
-        grado_discapacidad: this.normalizedOrNull(payload.infancia.gradoDiscapacidad),
-        trastornos: this.normalizedOrNull(payload.infancia.trastornos),
-        tratamientos_psicologicos_psiquiatricos: payload.infancia.tratamientosPsicologicosPsiquiatricos === undefined ? undefined : payload.infancia.tratamientosPsicologicosPsiquiatricos,
-        observacion_infancia: this.normalizedOrNull(payload.infancia.observacionInfancia)
-      });
-      if (infanciaBody) {
-        body['infancia'] = infanciaBody;
-      }
+    const historia = this.buildObservacionHistoria(payload.historiaPasadaEnfermedad);
+    if (historia) {
+      body['historia_pasada_enfermedad'] = historia;
     }
 
     return body;
   }
 
-  private toCondicionPayload(payload: FichaCondicionFinalPayload): Record<string, unknown> {
-    const cie10Codigo = payload.cie10Codigo?.trim() || undefined;
-    const cie10Descripcion = payload.cie10Descripcion?.trim() || undefined;
+  private buildObservacionHistoria(historia?: FichaObservacionClinicaPayload['historiaPasadaEnfermedad']): Record<string, unknown> | undefined {
+    if (!historia) {
+      return undefined;
+    }
+
+    const hospitalizacion = this.buildSection({
+      requiere: this.normalizeOptionalBoolean(historia.hospitalizacionRehabilitacion?.requiere),
+      tipo: this.normalizedOrNull(historia.hospitalizacionRehabilitacion?.tipo),
+      duracion: this.normalizedOrNull(historia.hospitalizacionRehabilitacion?.duracion)
+    });
+
+    const historiaBody = this.buildSection({
+      descripcion: this.normalizedOrNull(historia.descripcion),
+      toma_medicacion: this.normalizeOptionalBoolean(historia.tomaMedicacion),
+      tipo_medicacion: this.normalizedOrNull(historia.tipoMedicacion),
+      hospitalizacion_rehabilitacion: hospitalizacion
+    });
+
+    return historiaBody;
+  }
+
+  private toPsicoanamnesisPayload(payload: FichaPsicoanamnesisPayload): Record<string, unknown> {
+    // Always send all fields/groups, even if empty, to guarantee backend validation
     return {
-      condicion: payload.condicion,
-      condicion_final: payload.condicion,
-      cie10: cie10Codigo,
-      cie10_codigo: cie10Codigo,
-      cie10_descripcion: cie10Descripcion
+      prenatal: {
+        condiciones_biologicas_padres: payload.prenatal?.condicionesBiologicasPadres ?? '',
+        condiciones_psicologicas_padres: payload.prenatal?.condicionesPsicologicasPadres ?? '',
+        observacion_prenatal: payload.prenatal?.observacionPrenatal ?? ''
+      },
+      natal: {
+        parto_normal: payload.natal?.partoNormal ?? false,
+        termino_parto: payload.natal?.terminoParto ?? '',
+        complicaciones_parto: payload.natal?.complicacionesParto ?? '',
+        observacion_natal: payload.natal?.observacionNatal ?? ''
+      },
+      infancia: {
+        grado_sociabilidad: payload.infancia?.gradoSociabilidad ?? '',
+        relacion_padres_hermanos: payload.infancia?.relacionPadresHermanos ?? '',
+        discapacidad_intelectual: payload.infancia?.discapacidadIntelectual ?? false,
+        grado_discapacidad: payload.infancia?.gradoDiscapacidad ?? '',
+        trastornos: payload.infancia?.trastornos ?? '',
+        tratamientos_psicologicos_psiquiatricos: payload.infancia?.tratamientosPsicologicosPsiquiatricos ?? false,
+        observacion_infancia: payload.infancia?.observacionInfancia ?? ''
+      }
     };
   }
 
   private toCondicionClinicaPayload(payload: FichaCondicionClinicaPayload): Record<string, unknown> {
-    return {
-      condicion: this.normalizedRequired(payload.condicion),
-      diagnostico_cie10_codigo: this.normalizedOrNull(payload.diagnosticoCie10Codigo),
-      diagnostico_cie10_descripcion: this.normalizedOrNull(payload.diagnosticoCie10Descripcion),
-      plan_frecuencia: this.normalizedOrNull(payload.planFrecuencia),
-      plan_tipo_sesion: this.normalizedOrNull(payload.planTipoSesion),
-      plan_detalle: this.normalizedOrNull(payload.planDetalle)
-    };
+    const condicion = this.normalizedRequired(payload.condicion);
+    const body: Record<string, unknown> = { condicion };
+
+    const diagnosticoId = this.normalizeOptionalId(payload.diagnosticoCie10Id);
+    if (diagnosticoId !== undefined) {
+      body['diagnostico_cie10_id'] = diagnosticoId;
+    }
+
+    const diagnosticoCodigo = this.normalizedOrNull(payload.diagnosticoCie10Codigo);
+    if (diagnosticoCodigo !== undefined) {
+      body['diagnostico_cie10_codigo'] = diagnosticoCodigo;
+    }
+
+    const diagnosticoNombre = this.normalizedOrNull(payload.diagnosticoCie10Nombre);
+    if (diagnosticoNombre !== undefined) {
+      body['diagnostico_cie10_nombre'] = diagnosticoNombre;
+    }
+
+    const diagnosticoDescripcion = this.normalizedOrNull(payload.diagnosticoCie10Descripcion);
+    if (diagnosticoDescripcion !== undefined) {
+      body['diagnostico_cie10_descripcion'] = diagnosticoDescripcion;
+    }
+
+    const diagnosticoCategoriaPadre = this.normalizedOrNull(payload.diagnosticoCie10CategoriaPadre);
+    if (diagnosticoCategoriaPadre !== undefined) {
+      body['diagnostico_cie10_categoria_padre'] = diagnosticoCategoriaPadre;
+    }
+
+    const diagnosticoNivel = this.normalizedNumberOrNull(payload.diagnosticoCie10Nivel);
+    if (diagnosticoNivel !== undefined) {
+      body['diagnostico_cie10_nivel'] = diagnosticoNivel;
+    }
+
+    const frecuencia = this.normalizeOptionalEnum(payload.planFrecuencia);
+    if (frecuencia !== undefined) {
+      body['plan_frecuencia'] = frecuencia;
+    }
+
+    const tipoSesion = this.normalizeOptionalEnum(payload.planTipoSesion);
+    if (tipoSesion !== undefined) {
+      body['plan_tipo_sesion'] = tipoSesion;
+    }
+
+    const detalle = this.normalizedOrNull(payload.planDetalle);
+    if (detalle !== undefined) {
+      body['plan_detalle'] = detalle;
+    }
+
+    const proximo = this.normalizedDateOrNull(payload.proximoSeguimiento);
+    if (proximo !== undefined) {
+      body['proximo_seguimiento'] = proximo;
+    }
+
+    const transferenciaUnidad = this.normalizedOrNull(payload.transferenciaUnidad);
+    if (transferenciaUnidad !== undefined) {
+      body['transferencia_unidad'] = transferenciaUnidad;
+    }
+
+    const transferenciaObservacion = this.normalizedOrNull(payload.transferenciaObservacion);
+    if (transferenciaObservacion !== undefined) {
+      body['transferencia_observacion'] = transferenciaObservacion;
+    }
+
+    return body;
   }
 
   private normalizedOrUndefined(value: unknown): string | undefined {
@@ -180,6 +263,98 @@ export class FichasPsicologicasService {
     return trimmed.length ? trimmed : null;
   }
 
+  private normalizedDateOrNull(value: unknown): string | null | undefined {
+    if (value === undefined) {
+      return undefined;
+    }
+    if (value === null) {
+      return null;
+    }
+    if (value instanceof Date) {
+      if (Number.isNaN(value.getTime())) {
+        return null;
+      }
+      return value.toISOString();
+    }
+    if (typeof value !== 'string') {
+      return undefined;
+    }
+    const trimmed = value.trim();
+    if (!trimmed.length) {
+      return null;
+    }
+    if (/^\d{4}-\d{2}-\d{2}$/.test(trimmed)) {
+      return trimmed;
+    }
+    const parsed = new Date(trimmed);
+    if (!Number.isNaN(parsed.getTime())) {
+      return parsed.toISOString();
+    }
+    return trimmed;
+  }
+
+  private normalizeOptionalId(value: unknown): number | null | undefined {
+    if (value === undefined) {
+      return undefined;
+    }
+    if (value === null) {
+      return null;
+    }
+    if (typeof value === 'number' && Number.isFinite(value)) {
+      return Number(value);
+    }
+    if (typeof value === 'string') {
+      const trimmed = value.trim();
+      if (!trimmed.length) {
+        return null;
+      }
+      const parsed = Number(trimmed);
+      return Number.isFinite(parsed) ? parsed : undefined;
+    }
+    return undefined;
+  }
+
+  private normalizeOptionalEnum(value: unknown): string | null | undefined {
+    if (value === undefined) {
+      return undefined;
+    }
+    if (value === null) {
+      return null;
+    }
+    if (typeof value === 'string') {
+      const trimmed = value.trim();
+      if (!trimmed.length) {
+        return null;
+      }
+      return trimmed.toUpperCase();
+    }
+    return undefined;
+  }
+
+  private normalizedNumberOrNull(value: unknown): number | null | undefined {
+    if (value === undefined) {
+      return undefined;
+    }
+    if (value === null) {
+      return null;
+    }
+    if (typeof value === 'number' && Number.isFinite(value)) {
+      return Math.trunc(value);
+    }
+    if (typeof value === 'string') {
+      const trimmed = value.trim();
+      if (!trimmed.length) {
+        return null;
+      }
+      const parsed = Number(trimmed);
+      if (!Number.isFinite(parsed)) {
+        return undefined;
+      }
+      return Math.trunc(parsed);
+    }
+    return undefined;
+  }
+
   private normalizedRequired(value: unknown): string {
     if (typeof value === 'string') {
       const trimmed = value.trim();
@@ -190,11 +365,36 @@ export class FichasPsicologicasService {
     throw new Error('Valor requerido para la ficha psicologica no proporcionado');
   }
 
-  private buildSection(section: Record<string, string | number | boolean | null | undefined>): Record<string, unknown> | undefined {
+  private buildSection(section: Record<string, unknown>): Record<string, unknown> | undefined {
     const entries = Object.entries(section).filter(([, value]) => value !== undefined);
     if (!entries.length) {
       return undefined;
     }
     return Object.fromEntries(entries);
+  }
+
+  private normalizeOptionalBoolean(value: unknown): boolean | null | undefined {
+    if (value === undefined) {
+      return undefined;
+    }
+    if (value === null) {
+      return null;
+    }
+    if (typeof value === 'boolean') {
+      return value;
+    }
+    if (typeof value === 'string') {
+      const normalized = value.trim().toLowerCase();
+      if (!normalized.length) {
+        return null;
+      }
+      if (normalized === 'true' || normalized === '1' || normalized === 'si') {
+        return true;
+      }
+      if (normalized === 'false' || normalized === '0' || normalized === 'no') {
+        return false;
+      }
+    }
+    return undefined;
   }
 }

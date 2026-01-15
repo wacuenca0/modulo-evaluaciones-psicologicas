@@ -3,6 +3,7 @@ import { HttpClient, HttpHeaders } from '@angular/common/http';
 import { Observable, of, throwError } from 'rxjs';
 import { catchError, map, switchMap } from 'rxjs/operators';
 import { jwtDecode, JwtPayload } from 'jwt-decode';
+import { buildApiUrl } from '../core/config/api.config';
 
 const ROLE_ALIASES: Record<string, string> = {
   ADMIN: 'ROLE_ADMINISTRADOR',
@@ -22,7 +23,6 @@ import {
   UserDTO,
   RefreshTokenResponseDTO
 } from '../models/auth.models';
-import { environment } from '../../environments/environment';
 
 @Injectable({ providedIn: 'root' })
 export class AuthService {
@@ -33,7 +33,7 @@ export class AuthService {
   private readonly refreshKey = 'refresh_token';
   private readonly expKey = 'access_exp'; // epoch ms
   private readonly typeKey = 'token_type';
-  private readonly authUrl = `${environment.apiBaseUrl}/auth`;
+  private readonly authUrl = buildApiUrl('auth');
 
   // signals for reactive state
   private readonly accessTokenSig = signal<string | null>(this.readLocal(this.accessKey));

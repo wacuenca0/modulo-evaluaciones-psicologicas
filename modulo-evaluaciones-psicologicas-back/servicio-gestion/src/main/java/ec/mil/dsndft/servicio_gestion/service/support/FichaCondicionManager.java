@@ -1,5 +1,6 @@
 package ec.mil.dsndft.servicio_gestion.service.support;
 
+import ec.mil.dsndft.servicio_gestion.entity.CatalogoDiagnosticoCie10;
 import ec.mil.dsndft.servicio_gestion.entity.FichaPsicologica;
 import ec.mil.dsndft.servicio_gestion.model.enums.CondicionClinicaEnum;
 import ec.mil.dsndft.servicio_gestion.model.enums.FrecuenciaSeguimientoEnum;
@@ -12,55 +13,78 @@ import org.springframework.stereotype.Component;
 public class FichaCondicionManager {
 
     public void aplicarCondicionObligatoria(FichaPsicologica ficha,
-                                            String condicionRaw,
+                                            CondicionClinicaEnum condicion,
+                                            CatalogoDiagnosticoCie10 diagnosticoCatalogo,
                                             String cieCodigo,
+                                            String cieNombre,
+                                            String cieCategoriaPadre,
+                                            Integer cieNivel,
                                             String cieDescripcion,
                                             String planFrecuenciaRaw,
                                             String planTipoSesionRaw,
                                             String planDetalleRaw) {
-        aplicarCondicion(ficha, condicionRaw, cieCodigo, cieDescripcion, planFrecuenciaRaw, planTipoSesionRaw, planDetalleRaw, true);
+        aplicarCondicion(ficha, condicion, diagnosticoCatalogo, cieCodigo, cieNombre, cieCategoriaPadre, cieNivel, cieDescripcion, planFrecuenciaRaw, planTipoSesionRaw, planDetalleRaw, true);
     }
 
     public void aplicarCondicionOpcional(FichaPsicologica ficha,
-                                         String condicionRaw,
+                                         CondicionClinicaEnum condicion,
+                                         CatalogoDiagnosticoCie10 diagnosticoCatalogo,
                                          String cieCodigo,
+                                         String cieNombre,
+                                         String cieCategoriaPadre,
+                                         Integer cieNivel,
                                          String cieDescripcion,
                                          String planFrecuenciaRaw,
                                          String planTipoSesionRaw,
                                          String planDetalleRaw) {
-        if (!hasAnyValue(condicionRaw, cieCodigo, cieDescripcion, planFrecuenciaRaw, planTipoSesionRaw, planDetalleRaw)) {
+        if (!hasAnyValue(condicion != null ? condicion.getCanonical() : null,
+                cieCodigo,
+                cieNombre,
+                cieCategoriaPadre,
+                cieDescripcion,
+                planFrecuenciaRaw,
+                planTipoSesionRaw,
+                planDetalleRaw)
+            && cieNivel == null
+            && diagnosticoCatalogo == null) {
             return;
         }
-        aplicarCondicion(ficha, condicionRaw, cieCodigo, cieDescripcion, planFrecuenciaRaw, planTipoSesionRaw, planDetalleRaw, false);
+        aplicarCondicion(ficha, condicion, diagnosticoCatalogo, cieCodigo, cieNombre, cieCategoriaPadre, cieNivel, cieDescripcion, planFrecuenciaRaw, planTipoSesionRaw, planDetalleRaw, false);
     }
 
     private void aplicarCondicion(FichaPsicologica ficha,
-                                  String condicionRaw,
+                                  CondicionClinicaEnum condicionSolicitada,
+                                  CatalogoDiagnosticoCie10 diagnosticoCatalogo,
                                   String cieCodigo,
+                                  String cieNombre,
+                                  String cieCategoriaPadre,
+                                  Integer cieNivel,
                                   String cieDescripcion,
                                   String planFrecuenciaRaw,
                                   String planTipoSesionRaw,
                                   String planDetalleRaw,
                                   boolean condicionObligatoria) {
-        CondicionClinicaEnum condicion = resolveCondicion(ficha, condicionRaw, condicionObligatoria);
+        CondicionClinicaEnum condicion = resolveCondicion(ficha, condicionSolicitada, condicionObligatoria);
         ficha.setCondicionClinica(condicion);
 
         if (!condicion.requierePlan()) {
+            ficha.setDiagnosticoCie10Catalogo(null);
             ficha.setDiagnosticoCie10(null);
             ficha.setPlanSeguimiento(null);
             return;
         }
 
-        DiagnosticoCie10 diagnostico = buildDiagnostico(ficha, cieCodigo, cieDescripcion, condicionObligatoria);
+        CatalogoDiagnosticoCie10 seleccionado = resolveDiagnosticoCatalogo(ficha, diagnosticoCatalogo, condicionObligatoria);
+        DiagnosticoCie10 diagnostico = buildDiagnostico(ficha, seleccionado, cieCodigo, cieNombre, cieCategoriaPadre, cieNivel, cieDescripcion, condicionObligatoria);
+        ficha.setDiagnosticoCie10Catalogo(seleccionado);
         ficha.setDiagnosticoCie10(diagnostico);
 
-        PlanSeguimiento plan = buildPlan(ficha, planFrecuenciaRaw, planTipoSesionRaw, planDetalleRaw, condicionObligatoria);
+        PlanSeguimiento plan = buildPlan(ficha, condicion, planFrecuenciaRaw, planTipoSesionRaw, planDetalleRaw, condicionObligatoria);
         ficha.setPlanSeguimiento(plan);
     }
 
-    private CondicionClinicaEnum resolveCondicion(FichaPsicologica ficha, String condicionRaw, boolean condicionObligatoria) {
-        String token = trim(condicionRaw);
-        if (token == null) {
+    private CondicionClinicaEnum resolveCondicion(FichaPsicologica ficha, CondicionClinicaEnum condicionSolicitada, boolean condicionObligatoria) {
+        if (condicionSolicitada == null) {
             if (condicionObligatoria) {
                 throw new IllegalArgumentException("La condicion clinica es obligatoria");
             }
@@ -70,38 +94,111 @@ public class FichaCondicionManager {
             }
             return existente;
         }
-        return CondicionClinicaEnum.from(token)
-            .orElseThrow(() -> new IllegalArgumentException("Condicion clinica no soportada: " + condicionRaw));
+        return condicionSolicitada;
     }
 
     private DiagnosticoCie10 buildDiagnostico(FichaPsicologica ficha,
+                                              CatalogoDiagnosticoCie10 diagnosticoCatalogo,
                                               String cieCodigo,
+                                              String cieNombre,
+                                              String cieCategoriaPadre,
+                                              Integer cieNivel,
                                               String cieDescripcion,
                                               boolean condicionObligatoria) {
-        String codigo = uppercase(trim(cieCodigo));
-        String descripcion = trim(cieDescripcion);
+        String codigo = null;
+        String nombre = null;
+        String categoriaPadre = null;
+        Integer nivel = null;
+        String descripcion = null;
 
-        if (codigo == null) {
-            DiagnosticoCie10 existente = ficha.getDiagnosticoCie10();
-            if (existente != null && existente.getCodigo() != null) {
-                codigo = existente.getCodigo();
-                if (descripcion == null) {
-                    descripcion = existente.getDescripcion();
-                }
+        if (diagnosticoCatalogo != null) {
+            codigo = uppercase(trim(diagnosticoCatalogo.getCodigo()));
+            nombre = trim(diagnosticoCatalogo.getNombre());
+            categoriaPadre = uppercase(trim(diagnosticoCatalogo.getCategoriaPadre()));
+            nivel = diagnosticoCatalogo.getNivel();
+            descripcion = trim(diagnosticoCatalogo.getDescripcion());
+        }
+
+        DiagnosticoCie10 existente = ficha.getDiagnosticoCie10();
+        if (codigo == null && existente != null && existente.getCodigo() != null) {
+            codigo = existente.getCodigo();
+            if (descripcion == null) {
+                descripcion = existente.getDescripcion();
+            }
+            if (nombre == null) {
+                nombre = existente.getNombre();
+            }
+            if (categoriaPadre == null) {
+                categoriaPadre = existente.getCategoriaPadre();
+            }
+            if (nivel == null) {
+                nivel = existente.getNivel();
             }
         }
 
-        if (codigo == null) {
+        String codigoSolicitud = uppercase(trim(cieCodigo));
+        if (codigo == null && codigoSolicitud != null) {
+            codigo = codigoSolicitud;
+        }
+
+        String nombreSolicitud = trim(cieNombre);
+        if (nombreSolicitud != null) {
+            nombre = nombreSolicitud;
+        }
+
+        String categoriaSolicitud = uppercase(trim(cieCategoriaPadre));
+        if (categoriaSolicitud != null) {
+            categoriaPadre = categoriaSolicitud;
+        }
+
+        if (cieNivel != null) {
+            if (cieNivel < 0) {
+                throw new IllegalArgumentException("El nivel del diagnóstico debe ser mayor o igual a 0");
+            }
+            nivel = cieNivel;
+        }
+
+        String descripcionSolicitud = trim(cieDescripcion);
+        if (descripcionSolicitud != null) {
+            descripcion = descripcionSolicitud;
+        }
+
+        if (condicionObligatoria && diagnosticoCatalogo == null) {
+            throw new IllegalArgumentException("Debe seleccionar un diagnostico del catalogo CIE-10 para la condicion clinica");
+        }
+
+        if (condicionObligatoria && codigo == null) {
             throw new IllegalArgumentException("El codigo CIE-10 es obligatorio para la condicion seleccionada");
+        }
+
+        if (codigo == null && descripcion == null && nombre == null) {
+            return null;
         }
 
         return DiagnosticoCie10.builder()
             .codigo(codigo)
+            .nombre(nombre)
+            .categoriaPadre(categoriaPadre)
+            .nivel(nivel)
             .descripcion(descripcion)
             .build();
     }
 
+    private CatalogoDiagnosticoCie10 resolveDiagnosticoCatalogo(FichaPsicologica ficha,
+                                                                CatalogoDiagnosticoCie10 diagnosticoCatalogo,
+                                                                boolean condicionObligatoria) {
+        CatalogoDiagnosticoCie10 existente = ficha.getDiagnosticoCie10Catalogo();
+        CatalogoDiagnosticoCie10 seleccionado = diagnosticoCatalogo != null ? diagnosticoCatalogo : existente;
+
+        if (condicionObligatoria && seleccionado == null) {
+            throw new IllegalArgumentException("Debe seleccionar un diagnostico del catalogo CIE-10");
+        }
+
+        return seleccionado;
+    }
+
     private PlanSeguimiento buildPlan(FichaPsicologica ficha,
+                                      CondicionClinicaEnum condicion,
                                       String planFrecuenciaRaw,
                                       String planTipoSesionRaw,
                                       String planDetalleRaw,
@@ -124,11 +221,20 @@ public class FichaCondicionManager {
             detalle = existente.getDetalle();
         }
 
-        if (frecuenciaToken == null) {
-            throw new IllegalArgumentException("La frecuencia del plan de seguimiento es obligatoria");
-        }
-        if (tipoSesionToken == null) {
-            throw new IllegalArgumentException("El tipo de sesion es obligatorio");
+        // Para SEGUIMIENTO, frecuencia y tipo de sesión son obligatorios
+        // Para TRANSFERENCIA, el plan es opcional (puede ser null)
+        if (condicion == CondicionClinicaEnum.SEGUIMIENTO) {
+            if (frecuenciaToken == null) {
+                throw new IllegalArgumentException("La frecuencia del plan de seguimiento es obligatoria");
+            }
+            if (tipoSesionToken == null) {
+                throw new IllegalArgumentException("El tipo de sesion es obligatorio");
+            }
+        } else if (condicion == CondicionClinicaEnum.TRANSFERENCIA) {
+            // Para transferencia, si no hay frecuencia o tipo de sesión, no creamos plan
+            if (frecuenciaToken == null || tipoSesionToken == null) {
+                return null;
+            }
         }
 
         return PlanSeguimiento.builder()

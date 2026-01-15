@@ -7,4 +7,5 @@ public class ObservacionClinicaSectionDTO {
     private String observacionClinica;
     private String motivoConsulta;
     private String enfermedadActual;
+    private HistoriaPasadaEnfermedadDTO historiaPasadaEnfermedad;
 }

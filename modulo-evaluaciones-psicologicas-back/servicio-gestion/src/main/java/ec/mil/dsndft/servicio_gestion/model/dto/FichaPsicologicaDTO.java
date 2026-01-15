@@ -14,6 +14,12 @@ public class FichaPsicologicaDTO {
     private Long psicologoId;
     private String psicologoNombre;
     private String psicologoUsername;
+    private Long creadoPorId;
+    private String creadoPorNombre;
+    private String creadoPorUsername;
+    private Long actualizadoPorId;
+    private String actualizadoPorNombre;
+    private String actualizadoPorUsername;
     private String numeroEvaluacion;
     private LocalDate fechaEvaluacion;
     private String tipoEvaluacion;
@@ -23,11 +29,20 @@ public class FichaPsicologicaDTO {
     private PsicoanamnesisInfanciaDTO seccionInfancia;
     private String estado;
     private String condicion;
+    private Long diagnosticoCie10Id;
     private String diagnosticoCie10Codigo;
+    private String diagnosticoCie10Nombre;
+    private String diagnosticoCie10CategoriaPadre;
+    private Integer diagnosticoCie10Nivel;
     private String diagnosticoCie10Descripcion;
     private String planFrecuencia;
     private String planTipoSesion;
     private String planDetalle;
+    private LocalDate ultimaFechaSeguimiento;
+    private LocalDate proximoSeguimiento;
+    private LocalDate transferenciaFecha;
+    private String transferenciaUnidad;
+    private String transferenciaObservacion;
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
 }

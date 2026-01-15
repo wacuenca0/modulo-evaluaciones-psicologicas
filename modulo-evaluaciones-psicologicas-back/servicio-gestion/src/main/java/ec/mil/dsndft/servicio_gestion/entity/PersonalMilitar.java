@@ -70,6 +70,9 @@ public class PersonalMilitar {
     @Column(length = 100)
     private String especialidad;
 
+    @Column(name = "unidad_militar", length = 150)
+    private String unidadMilitar;
+
     @Column(length = 100)
     private String provincia;
 

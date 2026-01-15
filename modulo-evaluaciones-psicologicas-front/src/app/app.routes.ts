@@ -1,13 +1,19 @@
 import { Routes } from '@angular/router';
 import { AuthGuard } from './guards/auth.guard';
-import { RoleGuard } from './guards/role.guard';
+import { RoleGuard, RoleMatchGuard } from './guards/role.guard';
+import { GuestGuard } from './guards/guest.guard';
 
 export const routes: Routes = [
   { path: '', redirectTo: 'admin/catalogos', pathMatch: 'full' },
-  { path: 'login', loadComponent: () => import('./login/login.component').then(m => m.LoginComponent) },
+  {
+    path: 'login',
+    canMatch: [GuestGuard],
+    loadComponent: () => import('./login/login.component').then(m => m.LoginComponent)
+  },
   {
     path: 'users',
     canActivate: [AuthGuard, RoleGuard],
+    canMatch: [AuthGuard, RoleMatchGuard],
     data: { roles: ['ROLE_ADMINISTRADOR'] },
     children: [
       { path: '', loadComponent: () => import('./users/user-list/user-list.component').then(m => m.UserListComponent) },
@@ -23,6 +29,7 @@ export const routes: Routes = [
   {
     path: 'psicologo',
     canActivate: [AuthGuard, RoleGuard],
+    canMatch: [AuthGuard, RoleMatchGuard],
     data: { roles: ['ROLE_PSICOLOGO'] },
     children: [
       { path: '', redirectTo: 'personal', pathMatch: 'full' },
@@ -37,15 +44,21 @@ export const routes: Routes = [
   {
     path: 'reportes',
     canActivate: [AuthGuard, RoleGuard],
+    canMatch: [AuthGuard, RoleMatchGuard],
     data: { roles: ['ROLE_ADMINISTRADOR', 'ROLE_PSICOLOGO'] },
+    loadComponent: () => import('./reports/reports-shell.component').then(m => m.ReportsShellComponent),
     children: [
       { path: '', redirectTo: 'atenciones-psicologos', pathMatch: 'full' },
-      { path: 'atenciones-psicologos', loadComponent: () => import('./reports/atenciones-psicologos/atenciones-psicologos-report.component').then(m => m.AtencionesPsicologosReportComponent) }
+      { path: 'atenciones-psicologos', loadComponent: () => import('./reports/atenciones-psicologos/atenciones-psicologos-report.component').then(m => m.AtencionesPsicologosReportComponent) },
+      { path: 'personal-diagnosticos', loadComponent: () => import('./reports/personal-diagnosticos/personal-diagnosticos-report.component').then(m => m.PersonalDiagnosticosReportComponent) },
+      { path: 'historial-fichas', loadComponent: () => import('./reports/historial-fichas/historial-fichas-report.component').then(m => m.HistorialFichasReportComponent) },
+      { path: 'condicion-seguimiento', loadComponent: () => import('./reports/condicion-seguimiento/condicion-seguimiento-report.component').then(m => m.CondicionSeguimientoReportComponent) }
     ]
   },
   {
     path: 'admin',
     canActivate: [AuthGuard, RoleGuard],
+    canMatch: [AuthGuard, RoleMatchGuard],
     data: { roles: ['ROLE_ADMINISTRADOR'] },
     loadChildren: () => import('./features/admin/admin.routes').then(m => m.ADMIN_ROUTES)
   },

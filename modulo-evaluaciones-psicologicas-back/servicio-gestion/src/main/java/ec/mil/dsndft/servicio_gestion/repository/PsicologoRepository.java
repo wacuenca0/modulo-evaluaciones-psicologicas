@@ -22,6 +22,7 @@ public interface PsicologoRepository extends JpaRepository<Psicologo, Long> {
 	    "p.id, " +
 	    "p.apellidosNombres, " +
 	    "p.username, " +
+	    "p.unidadMilitar, " +
 	    "COUNT(DISTINCT f.id), " +
 	    "COALESCE(SUM(CASE WHEN UPPER(f.estado) = 'ACTIVA' THEN 1 ELSE 0 END), 0), " +
 	    "COALESCE(SUM(CASE WHEN UPPER(f.estado) = 'OBSERVACION' THEN 1 ELSE 0 END), 0), " +
@@ -33,18 +34,20 @@ public interface PsicologoRepository extends JpaRepository<Psicologo, Long> {
 	    "LEFT JOIN FichaPsicologica f ON f.psicologo.id = p.id " +
 	    "  AND (:fechaDesde IS NULL OR f.fechaEvaluacion >= :fechaDesde) " +
 	    "  AND (:fechaHasta IS NULL OR f.fechaEvaluacion <= :fechaHasta) " +
-	    "  AND (:cieCodigo IS NULL OR (f.diagnosticoCie10.codigo IS NOT NULL AND UPPER(f.diagnosticoCie10.codigo) LIKE UPPER(CONCAT(:cieCodigo, '%')))) " +
-	    "  AND (:cieTexto IS NULL OR (f.diagnosticoCie10.descripcion IS NOT NULL AND UPPER(f.diagnosticoCie10.descripcion) LIKE UPPER(CONCAT('%', CONCAT(:cieTexto, '%'))))) " +
+		"  AND (:diagnosticoId IS NULL OR (f.diagnosticoCie10Catalogo IS NOT NULL AND f.diagnosticoCie10Catalogo.id = :diagnosticoId)) " +
+	    "  AND (:cedula IS NULL OR (f.personalMilitar.cedula IS NOT NULL AND UPPER(f.personalMilitar.cedula) = UPPER(:cedula))) " +
 	    "LEFT JOIN SeguimientoPsicologico s ON s.fichaPsicologica = f " +
 	    "  AND (:fechaDesde IS NULL OR s.fechaSeguimiento >= :fechaDesde) " +
 	    "  AND (:fechaHasta IS NULL OR s.fechaSeguimiento <= :fechaHasta) " +
 	    "WHERE p.activo = true " +
 	    "AND (:psicologoId IS NULL OR p.id = :psicologoId) " +
-	    "GROUP BY p.id, p.apellidosNombres, p.username " +
+	    "AND (:unidadMilitar IS NULL OR (p.unidadMilitar IS NOT NULL AND UPPER(p.unidadMilitar) = UPPER(:unidadMilitar))) " +
+	    "GROUP BY p.id, p.apellidosNombres, p.username, p.unidadMilitar " +
 	    "ORDER BY p.apellidosNombres ASC")
     List<ReporteAtencionPsicologoDTO> obtenerReporteAtenciones(@Param("psicologoId") Long psicologoId,
-									@Param("fechaDesde") LocalDate fechaDesde,
-									@Param("fechaHasta") LocalDate fechaHasta,
-									@Param("cieCodigo") String diagnosticoCodigo,
-									@Param("cieTexto") String diagnosticoTexto);
+										@Param("fechaDesde") LocalDate fechaDesde,
+										@Param("fechaHasta") LocalDate fechaHasta,
+					@Param("diagnosticoId") Long diagnosticoId,
+					@Param("cedula") String cedula,
+					@Param("unidadMilitar") String unidadMilitar);
 }

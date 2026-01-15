@@ -1,0 +1,123 @@
+================================================================================
+REPORTE: PERSONAL CON DIAGNÓSTICOS
+================================================================================
+
+DESCRIPCIÓN:
+Este reporte lista al personal militar que ha recibido diagnósticos CIE-10,
+mostrando información detallada del diagnóstico, el personal y el psicólogo
+que realizó la evaluación. Permite análisis epidemiológico y estadístico.
+
+URL:
+GET /gestion/api/reportes/personal-diagnosticos
+
+MÉTODO: GET
+
+AUTENTICACIÓN: 
+Requiere token Bearer y rol ADMINISTRADOR o PSICOLOGO
+
+PARÁMETROS DE CONSULTA (Query Params - todos opcionales):
+{
+  "fechaDesde": "2026-01-01",            // Formato: YYYY-MM-DD
+  "fechaHasta": "2026-01-31",            // Formato: YYYY-MM-DD
+  "diagnosticoId": 456,                  // ID del diagnóstico CIE-10
+  "cedula": "1234567890",                // Cédula del personal militar
+  "grado": "Sargento",                   // Grado militar
+  "unidadMilitar": "Nombre de Unidad"    // Nombre de la unidad militar
+}
+
+EJEMPLO DE URL COMPLETA:
+/gestion/api/reportes/personal-diagnosticos?diagnosticoId=15&fechaDesde=2026-01-01&unidadMilitar=Hospital Militar
+
+RESPUESTA JSON (200 OK):
+[
+  {
+    "personalMilitarId": 105,
+    "personalMilitarCedula": "1234567890",
+    "personalMilitarNombre": "Sargento Carlos Mendoza",
+    "tipoPersona": "Militar",
+    "esMilitar": true,
+    "grado": "Sargento Primero",
+    "unidadMilitar": "Brigada de Fuerzas Especiales",
+    "numeroEvaluacion": "EV-2026-00234",
+    "fechaEvaluacion": "2026-01-15",
+    "diagnosticoCodigo": "F32.0",
+    "diagnosticoNombre": "Episodio depresivo leve",
+    "diagnosticoCategoriaPadre": "F30-F39",
+    "diagnosticoNivel": 3,
+    "diagnosticoDescripcion": "Trastornos del estado de ánimo (afectivos)",
+    "psicologoId": 1,
+    "psicologoNombre": "Dr. Juan Pérez",
+    "psicologoUnidadMilitar": "Hospital Militar Central",
+    "filtroFechaDesde": "2026-01-01",
+    "filtroFechaHasta": null,
+    "filtroDiagnosticoId": 15,
+    "filtroDiagnosticoCodigo": "F32.0",
+    "filtroDiagnosticoTexto": "Episodio depresivo leve",
+    "filtroCedula": null,
+    "filtroGrado": null,
+    "filtroUnidadMilitar": "Hospital Militar"
+  },
+  {
+    "personalMilitarId": 106,
+    "personalMilitarCedula": "0987654321",
+    "personalMilitarNombre": "Teniente Ana Rodríguez",
+    "tipoPersona": "Militar",
+    "esMilitar": true,
+    "grado": "Teniente",
+    "unidadMilitar": "Base Aérea Quito",
+    "numeroEvaluacion": "EV-2026-00235",
+    "fechaEvaluacion": "2026-01-20",
+    "diagnosticoCodigo": "F41.1",
+    "diagnosticoNombre": "Trastorno de ansiedad generalizada",
+    "diagnosticoCategoriaPadre": "F40-F48",
+    "diagnosticoNivel": 3,
+    "diagnosticoDescripcion": "Trastornos neuróticos, secundarios a situaciones estresantes y somatomorfos",
+    "psicologoId": 2,
+    "psicologoNombre": "Dra. María López",
+    "psicologoUnidadMilitar": "Hospital Militar Central",
+    "filtroFechaDesde": "2026-01-01",
+    "filtroFechaHasta": null,
+    "filtroDiagnosticoId": 15,
+    "filtroDiagnosticoCodigo": null,
+    "filtroDiagnosticoTexto": null,
+    "filtroCedula": null,
+    "filtroGrado": null,
+    "filtroUnidadMilitar": "Hospital Militar"
+  }
+]
+
+CAMPOS DE LA RESPUESTA:
+- personalMilitarId: ID del personal militar
+- personalMilitarCedula: Cédula de identidad
+- personalMilitarNombre: Nombre completo (puede incluir grado)
+- tipoPersona: Tipo de persona (Militar, Civil, Familiar)
+- esMilitar: Booleano que indica si es militar activo
+- grado: Grado militar si aplica
+- unidadMilitar: Unidad militar de pertenencia
+- numeroEvaluacion: Número único de evaluación
+- fechaEvaluacion: Fecha cuando se realizó la evaluación
+- diagnosticoCodigo: Código CIE-10 del diagnóstico
+- diagnosticoNombre: Nombre del diagnóstico
+- diagnosticoCategoriaPadre: Categoría padre del CIE-10
+- diagnosticoNivel: Nivel jerárquico en el catálogo CIE-10
+- diagnosticoDescripcion: Descripción completa del diagnóstico
+- psicologoId: ID del psicólogo evaluador
+- psicologoNombre: Nombre del psicólogo
+- psicologoUnidadMilitar: Unidad del psicólogo
+- filtro*: Campos que reflejan los filtros aplicados
+
+CASOS DE USO:
+1. Análisis epidemiológico de diagnósticos en el personal militar
+2. Estadísticas de prevalencia de trastornos específicos
+3. Consultar todos los diagnósticos de un personal por cédula
+4. Filtrar diagnósticos por grado militar
+5. Reportes por unidad militar para análisis de salud mental
+6. Identificar tendencias de diagnósticos en periodos específicos
+7. Auditoría de diagnósticos realizados
+
+NOTAS:
+- Solo incluye fichas que tienen diagnóstico CIE-10 asignado
+- Útil para reportes estadísticos y análisis de salud mental
+- Permite filtrado múltiple para análisis específicos
+- Los datos de diagnóstico provienen del catálogo CIE-10
+- Respeta la privacidad mostrando solo información autorizada

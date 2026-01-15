@@ -1,9 +1,11 @@
-import { ChangeDetectionStrategy, Component, OnDestroy, computed, inject, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, DestroyRef, OnDestroy, computed, inject, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormBuilder, ReactiveFormsModule, ValidationErrors, ValidatorFn, Validators } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
 import { PersonalMilitarService } from '../../services/personal-militar.service';
 import { PersonalMilitarDTO, PersonalMilitarPayload, Sexo } from '../../models/personal-militar.models';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
+import { GRADOS_MILITARES, PROVINCIAS_ECUADOR, ProvinciaCatalog } from '../../core/config/personal-form.options';
 
 const edadOFechaValidator: ValidatorFn = (group) => {
   const edadControl = group.get('edad');
@@ -44,17 +46,15 @@ interface PasoFormulario {
         </button>
       </header>
 
-      <nav class="grid gap-2 sm:grid-cols-2 xl:grid-cols-4">
+      <nav class="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
         @for (paso of pasos; track paso.id; let index = $index) {
-          <div class="rounded-2xl border px-4 py-3 transition"
-            [class.border-slate-900]="pasoActual() === index"
-            [class.bg-slate-900]="pasoActual() === index"
-            [class.text-white]="pasoActual() === index"
-            [class.border-slate-200]="pasoActual() !== index"
-            [class.bg-white]="pasoActual() !== index">
-            <p class="text-xs font-semibold uppercase tracking-wide">Paso {{ index + 1 }}</p>
-            <p class="text-sm font-semibold">{{ paso.titulo }}</p>
-            <p class="text-xs" [class.text-slate-300]="pasoActual() === index" [class.text-slate-500]="pasoActual() !== index">{{ paso.descripcion }}</p>
+          <div [class]="pasoCardClass(index)" class="transition-all duration-300">
+            <div class="flex items-center justify-between">
+              <p class="text-[11px] font-bold uppercase tracking-widest">Paso {{ index + 1 }}</p>
+              <span [class]="pasoIndicatorClass(index)" aria-hidden="true"></span>
+            </div>
+            <p class="mt-1 text-sm font-semibold">{{ paso.titulo }}</p>
+            <p class="text-xs" [class.text-white/80]="pasoActual() === index" [class.text-slate-600]="pasoActual() !== index">{{ paso.descripcion }}</p>
           </div>
         }
       </nav>
@@ -73,8 +73,46 @@ interface PasoFormulario {
         </div>
       }
 
+      @if (persona()) {
+        <article class="relative overflow-hidden rounded-3xl border-2 border-slate-200 bg-gradient-to-r from-slate-50 to-white p-6 shadow-sm">
+          <header class="flex flex-wrap items-center justify-between gap-6">
+            <div class="flex items-start gap-4">
+              <!-- Avatar -->
+              <div class="relative grid h-14 w-14 place-items-center rounded-2xl bg-gradient-to-br from-slate-800 to-slate-600 text-white shadow-lg ring-2 ring-white/60">
+                <span class="text-lg font-bold">{{ personaIniciales() }}</span>
+              </div>
+              <div class="space-y-1">
+                <p class="text-[11px] font-semibold uppercase tracking-widest text-slate-500">Resumen del personal</p>
+                <h2 class="text-2xl font-bold text-slate-900 leading-tight">{{ personaNombre() }}</h2>
+                <div class="flex flex-wrap items-center gap-2 text-sm text-slate-600">
+                  <span class="inline-flex items-center gap-1 rounded-md bg-slate-100 px-2.5 py-1 font-medium">
+                    <svg class="h-4 w-4 text-slate-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 11c1.657 0 3-1.343 3-3S13.657 5 12 5 9 6.343 9 8s1.343 3 3 3zM19 20a7 7 0 10-14 0h14z"/></svg>
+                    Cedula: <span class="font-semibold">{{ persona()?.cedula || 'No registrada' }}</span>
+                  </span>
+                </div>
+                <div class="mt-2 flex flex-wrap items-center gap-2">
+                  <span [class]="'inline-flex items-center gap-2 rounded-xl px-3 py-1.5 text-[12px] font-bold uppercase tracking-wide ' + tipoPersonaBadgeClass()">
+                    {{ persona()?.tipoPersona || (persona()?.esMilitar ? 'Militar' : 'Dependiente/Civil') }}
+                  </span>
+                  <span class="inline-flex items-center gap-2 rounded-xl bg-slate-100 px-3 py-1.5 text-[12px] font-semibold text-slate-700">
+                    {{ persona()?.provincia || 'Sin provincia' }}
+                  </span>
+                </div>
+              </div>
+            </div>
+            <div class="flex items-center gap-2 text-xs text-slate-600">
+              <button type="button" (click)="cerrar()"
+                class="inline-flex items-center justify-center gap-2 rounded-lg border-2 border-slate-300 bg-white px-4 py-2.5 text-xs font-bold uppercase tracking-wide text-slate-700 shadow-sm transition-all hover:border-slate-400 hover:bg-slate-50 hover:shadow-md"
+                [disabled]="cargando()">
+                Cerrar
+              </button>
+            </div>
+          </header>
+        </article>
+      }
+
       <form [formGroup]="form" (ngSubmit)="onSubmit()"
-        class="space-y-6 rounded-3xl border border-slate-200 bg-white p-6 shadow-lg">
+        class="space-y-6 rounded-3xl border-2 border-slate-200 bg-white p-6 shadow-xl">
         @switch (pasoActual()) {
           @case (0) {
             <section class="grid gap-4 md:grid-cols-2">
@@ -202,8 +240,13 @@ interface PasoFormulario {
               </label>
               <label class="text-xs font-semibold uppercase tracking-wide text-slate-500">
                 Grado
-                <input formControlName="grado" type="text" maxlength="100" autocomplete="off"
-                  class="mt-1 w-full rounded-md border px-3 py-2 text-sm focus:border-slate-900 focus:outline-none focus:ring" />
+                <select formControlName="grado"
+                  class="mt-1 w-full rounded-md border px-3 py-2 text-sm focus:border-slate-900 focus:outline-none focus:ring">
+                  <option value="">Selecciona...</option>
+                  @for (grado of gradoOpciones; track grado) {
+                    <option [value]="grado">{{ grado }}</option>
+                  }
+                </select>
               </label>
               <label class="text-xs font-semibold uppercase tracking-wide text-slate-500">
                 Especialidad
@@ -216,18 +259,35 @@ interface PasoFormulario {
             <section class="grid gap-4 md:grid-cols-2">
               <label class="text-xs font-semibold uppercase tracking-wide text-slate-500">
                 Provincia
-                <input formControlName="provincia" type="text" maxlength="100" autocomplete="off"
-                  class="mt-1 w-full rounded-md border px-3 py-2 text-sm focus:border-slate-900 focus:outline-none focus:ring" />
+                <select formControlName="provincia"
+                  class="mt-1 w-full rounded-md border px-3 py-2 text-sm focus:border-slate-900 focus:outline-none focus:ring">
+                  <option value="">Selecciona...</option>
+                  @for (provincia of provinciaOpciones; track provincia) {
+                    <option [value]="provincia">{{ provincia }}</option>
+                  }
+                </select>
               </label>
               <label class="text-xs font-semibold uppercase tracking-wide text-slate-500">
                 Canton
-                <input formControlName="canton" type="text" maxlength="100" autocomplete="off"
-                  class="mt-1 w-full rounded-md border px-3 py-2 text-sm focus:border-slate-900 focus:outline-none focus:ring" />
+                <select formControlName="canton"
+                  class="mt-1 w-full rounded-md border px-3 py-2 text-sm focus:border-slate-900 focus:outline-none focus:ring"
+                  [disabled]="!cantonOpciones().length">
+                  <option value="">Selecciona...</option>
+                  @for (canton of cantonOpciones(); track canton) {
+                    <option [value]="canton">{{ canton }}</option>
+                  }
+                </select>
               </label>
               <label class="text-xs font-semibold uppercase tracking-wide text-slate-500">
                 Parroquia
-                <input formControlName="parroquia" type="text" maxlength="100" autocomplete="off"
-                  class="mt-1 w-full rounded-md border px-3 py-2 text-sm focus:border-slate-900 focus:outline-none focus:ring" />
+                <select formControlName="parroquia"
+                  class="mt-1 w-full rounded-md border px-3 py-2 text-sm focus:border-slate-900 focus:outline-none focus:ring"
+                  [disabled]="!parroquiaOpciones().length">
+                  <option value="">Selecciona...</option>
+                  @for (parroquia of parroquiaOpciones(); track parroquia) {
+                    <option [value]="parroquia">{{ parroquia }}</option>
+                  }
+                </select>
               </label>
               <label class="text-xs font-semibold uppercase tracking-wide text-slate-500">
                 Barrio o sector
@@ -309,6 +369,7 @@ export class PersonalDetailComponent implements OnDestroy {
   private readonly service = inject(PersonalMilitarService);
   private readonly route = inject(ActivatedRoute);
   private readonly router = inject(Router);
+  private readonly destroyRef = inject(DestroyRef);
 
   readonly pasos: ReadonlyArray<PasoFormulario> = [
     { id: 'identificacion', titulo: 'Identificacion', descripcion: 'Cedula y datos basicos', controles: ['cedula', 'apellidosNombres', 'tipoPersona', 'esMilitar'] },
@@ -322,6 +383,10 @@ export class PersonalDetailComponent implements OnDestroy {
   readonly estadoCivilOpciones: ReadonlyArray<string> = ['Soltera', 'Soltero', 'Casada', 'Casado', 'Divorciada', 'Divorciado', 'Viuda', 'Viudo', 'Union de hecho', 'Separada', 'Separado'];
   readonly etniaOpciones: ReadonlyArray<string> = ['Mestiza', 'Afroecuatoriana', 'Indigena', 'Montubia', 'Blanca', 'Otra'];
   readonly seguroOpciones: ReadonlyArray<string> = ['ISSFA', 'IESS', 'Privado', 'Ninguno', 'Otro'];
+  readonly gradoOpciones = GRADOS_MILITARES;
+  readonly provinciaOpciones: ReadonlyArray<string> = PROVINCIAS_ECUADOR.map((provincia) => provincia.nombre);
+  readonly cantonOpciones = signal<ReadonlyArray<string>>([]);
+  readonly parroquiaOpciones = signal<ReadonlyArray<string>>([]);
 
   readonly form = this.fb.group({
     cedula: ['', [Validators.required, Validators.maxLength(20)]],
@@ -362,9 +427,128 @@ export class PersonalDetailComponent implements OnDestroy {
   readonly esUltimoPaso = computed(() => this.pasoActual() === this.pasos.length - 1);
   readonly titulo = computed(() => this.esEdicion() ? 'Actualizar personal militar' : 'Registrar personal militar');
   readonly botonTexto = computed(() => this.esEdicion() ? 'Guardar cambios' : 'Registrar personal');
+  readonly personaNombre = computed(() => {
+    const current = this.persona();
+    if (!current) return 'Sin datos';
+    const apellidosNombres = current.apellidosNombres?.trim();
+    if (apellidosNombres?.length) return apellidosNombres;
+    const partes = [current.apellidos, current.nombres]
+      .filter((parte): parte is string => !!parte && parte.trim().length > 0)
+      .map(parte => parte.trim());
+    return partes.length ? partes.join(' ') : 'Sin nombres registrados';
+  });
+
+  personaIniciales(): string {
+    const nombre = this.personaNombre();
+    const partes = nombre.split(' ').filter(p => p.trim().length);
+    const letras = partes.slice(0, 2).map(p => p[0]?.toUpperCase() ?? '').join('');
+    return letras || 'P';
+  }
+
+  tipoPersonaBadgeClass(): string {
+    const tipo = this.persona()?.tipoPersona?.trim().toLowerCase();
+    if (tipo === 'militar') return 'bg-emerald-600 text-white shadow-lg';
+    if (tipo === 'dependiente') return 'bg-indigo-600 text-white shadow-lg';
+    if (tipo === 'civil') return 'bg-sky-600 text-white shadow-lg';
+    return 'bg-slate-500 text-white';
+  }
 
   constructor() {
+    this.configurarUbicacionReactividad();
     this.resolverContexto();
+  }
+
+  // Estilos modernos para el stepper de navegación
+  pasoCardClass(index: number): string {
+    const activo = this.pasoActual() === index;
+    if (activo) {
+      return 'rounded-2xl border-2 border-slate-900 bg-gradient-to-r from-slate-800 to-slate-900 p-4 text-white shadow-lg ring-1 ring-white/10';
+    }
+    return 'rounded-2xl border-2 border-slate-200 bg-white p-4 text-slate-900 shadow-sm hover:border-slate-300 hover:shadow-md';
+  }
+
+  pasoIndicatorClass(index: number): string {
+    const activo = this.pasoActual() === index;
+    return activo
+      ? 'inline-flex h-2 w-2 animate-ping rounded-full bg-emerald-400'
+      : 'inline-flex h-2 w-2 rounded-full bg-slate-300';
+  }
+
+  private configurarUbicacionReactividad() {
+    const provinciaControl = this.form.get('provincia');
+    const cantonControl = this.form.get('canton');
+    const parroquiaControl = this.form.get('parroquia');
+
+    if (!provinciaControl || !cantonControl || !parroquiaControl) {
+      return;
+    }
+
+    const syncParroquias = (provinciaCatalogo: ProvinciaCatalog, cantonNombre: string | null) => {
+      if (!cantonNombre) {
+        this.parroquiaOpciones.set([]);
+        if (parroquiaControl.value) {
+          parroquiaControl.setValue('', { emitEvent: false });
+        }
+        return;
+      }
+      const parroquias = this.buscarCanton(provinciaCatalogo, cantonNombre)?.parroquias ?? [];
+      this.parroquiaOpciones.set(parroquias);
+      const parroquiaActual = this.normalizeOptionalString(parroquiaControl.value);
+      const parroquiaCoincidente = this.encontrarCoincidencia(parroquiaActual, parroquias);
+      if (parroquiaCoincidente) {
+        if (parroquiaCoincidente !== parroquiaControl.value) {
+          parroquiaControl.setValue(parroquiaCoincidente, { emitEvent: false });
+        }
+        return;
+      }
+      if (parroquiaControl.value) {
+        parroquiaControl.setValue('', { emitEvent: false });
+      }
+    };
+
+    const syncCantones = (provinciaValor: unknown) => {
+      const provinciaNombre = this.normalizeOptionalString(provinciaValor);
+      const provinciaCatalogo = this.buscarProvincia(provinciaNombre);
+      if (!provinciaCatalogo) {
+        this.cantonOpciones.set([]);
+        this.parroquiaOpciones.set([]);
+        return;
+      }
+      const cantones = provinciaCatalogo?.cantones.map((canton) => canton.nombre) ?? [];
+      this.cantonOpciones.set(cantones);
+      const cantonActual = this.normalizeOptionalString(cantonControl.value);
+      const cantonCoincidente = this.encontrarCoincidencia(cantonActual, cantones);
+      if (cantonCoincidente) {
+        if (cantonCoincidente !== cantonControl.value) {
+          cantonControl.setValue(cantonCoincidente, { emitEvent: false });
+        }
+        syncParroquias(provinciaCatalogo, cantonCoincidente);
+        return;
+      }
+      if (cantonControl.value) {
+        cantonControl.setValue('', { emitEvent: false });
+      }
+      syncParroquias(provinciaCatalogo, null);
+    };
+
+    provinciaControl.valueChanges
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe((valor) => syncCantones(valor));
+
+    cantonControl.valueChanges
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe((valor) => {
+        const provinciaNombre = this.normalizeOptionalString(provinciaControl.value);
+        const provinciaCatalogo = this.buscarProvincia(provinciaNombre);
+        if (!provinciaCatalogo) {
+          this.parroquiaOpciones.set([]);
+          return;
+        }
+        const cantonNombre = this.encontrarCoincidencia(this.normalizeOptionalString(valor), provinciaCatalogo?.cantones.map((item) => item.nombre) ?? []);
+        syncParroquias(provinciaCatalogo, cantonNombre);
+      });
+
+    syncCantones(provinciaControl.value);
   }
 
   onSubmit() {
@@ -581,6 +765,38 @@ export class PersonalDetailComponent implements OnDestroy {
         }
       });
     }
+  }
+
+  private buscarProvincia(nombre: string | null): ProvinciaCatalog | null {
+    if (!nombre) {
+      return null;
+    }
+    const objetivo = nombre.toLowerCase();
+    return PROVINCIAS_ECUADOR.find((provincia) => provincia.nombre.toLowerCase() === objetivo) ?? null;
+  }
+
+  private buscarCanton(
+    provincia: ProvinciaCatalog | null,
+    cantonNombre: string | null
+  ): ProvinciaCatalog['cantones'][number] | null {
+    if (!provincia || !cantonNombre) {
+      return null;
+    }
+    const objetivo = cantonNombre.toLowerCase();
+    return provincia.cantones.find((canton) => canton.nombre.toLowerCase() === objetivo) ?? null;
+  }
+
+  private encontrarCoincidencia(valor: string | null, opciones: ReadonlyArray<string>): string | null {
+    if (!valor || !opciones.length) {
+      return null;
+    }
+    const objetivo = valor.toLowerCase();
+    for (const opcion of opciones) {
+      if (opcion.toLowerCase() === objetivo) {
+        return opcion;
+      }
+    }
+    return null;
   }
 
   private patchForm(persona: PersonalMilitarDTO) {

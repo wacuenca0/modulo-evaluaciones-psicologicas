@@ -1,16 +1,15 @@
 package ec.mil.dsndft.servicio_gestion.controller;
 
 import ec.mil.dsndft.servicio_gestion.model.dto.reportes.ReporteAtencionPsicologoDTO;
-import ec.mil.dsndft.servicio_gestion.model.dto.reportes.ReporteEpidemiologiaDTO;
-import ec.mil.dsndft.servicio_gestion.model.dto.reportes.ReporteHistorialPsicologicoDTO;
-import ec.mil.dsndft.servicio_gestion.model.dto.reportes.ReportePersonalObservacionDTO;
+import ec.mil.dsndft.servicio_gestion.model.dto.reportes.ReporteHistorialFichaDTO;
+import ec.mil.dsndft.servicio_gestion.model.dto.reportes.ReportePersonalDiagnosticoDTO;
+import ec.mil.dsndft.servicio_gestion.model.dto.reportes.ReporteSeguimientoTransferenciaDTO;
 import ec.mil.dsndft.servicio_gestion.service.ReporteGestionService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
@@ -25,50 +24,59 @@ public class ReporteGestionController {
 
     private final ReporteGestionService reporteGestionService;
 
-    @PreAuthorize("hasRole('ADMINISTRADOR')")
+    @PreAuthorize("hasAnyRole('ADMINISTRADOR','PSICOLOGO')")
     @GetMapping("/atenciones-psicologos")
     public ResponseEntity<List<ReporteAtencionPsicologoDTO>> obtenerAtenciones(
         @RequestParam(required = false) Long psicologoId,
         @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate fechaDesde,
         @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate fechaHasta,
-        @RequestParam(required = false) String cie10Codigo,
-        @RequestParam(required = false) String cie10Texto
+        @RequestParam(required = false) Long diagnosticoId,
+        @RequestParam(required = false) String cedula,
+        @RequestParam(required = false) String unidadMilitar
     ) {
         List<ReporteAtencionPsicologoDTO> resultado = reporteGestionService
-            .obtenerAtencionesPorPsicologo(psicologoId, fechaDesde, fechaHasta, cie10Codigo, cie10Texto);
+            .obtenerAtencionesPorPsicologo(psicologoId, fechaDesde, fechaHasta, diagnosticoId, cedula, unidadMilitar);
         return ResponseEntity.ok(resultado);
     }
 
-    @PreAuthorize("hasRole('ADMINISTRADOR')")
-    @GetMapping("/observacion")
-    public ResponseEntity<List<ReportePersonalObservacionDTO>> obtenerObservacion(
+    @PreAuthorize("hasAnyRole('ADMINISTRADOR','PSICOLOGO')")
+    @GetMapping("/condicion-seguimiento")
+    public ResponseEntity<List<ReporteSeguimientoTransferenciaDTO>> obtenerSeguimientoOTransferencia(
         @RequestParam(required = false) Long psicologoId,
         @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate fechaDesde,
-        @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate fechaHasta
+        @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate fechaHasta,
+        @RequestParam(required = false) String cedula,
+        @RequestParam(required = false) String unidadMilitar
     ) {
-        List<ReportePersonalObservacionDTO> resultado = reporteGestionService
-            .obtenerPersonalEnObservacion(psicologoId, fechaDesde, fechaHasta);
+        List<ReporteSeguimientoTransferenciaDTO> resultado = reporteGestionService
+            .obtenerPersonasEnSeguimientoOTransferencia(psicologoId, fechaDesde, fechaHasta, cedula, unidadMilitar);
         return ResponseEntity.ok(resultado);
     }
 
-    @PreAuthorize("hasRole('ADMINISTRADOR')")
-    @GetMapping("/epidemiologia")
-    public ResponseEntity<ReporteEpidemiologiaDTO> obtenerEpidemiologia(
+    @PreAuthorize("hasAnyRole('ADMINISTRADOR','PSICOLOGO')")
+    @GetMapping("/personal-diagnosticos")
+    public ResponseEntity<List<ReportePersonalDiagnosticoDTO>> obtenerPersonalDiagnosticos(
         @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate fechaDesde,
-        @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate fechaHasta
+        @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate fechaHasta,
+        @RequestParam(required = false) Long diagnosticoId,
+        @RequestParam(required = false) String cedula,
+        @RequestParam(required = false) String grado,
+        @RequestParam(required = false) String unidadMilitar
     ) {
-        ReporteEpidemiologiaDTO dto = reporteGestionService.obtenerEstadisticaEpidemiologica(fechaDesde, fechaHasta);
-        return ResponseEntity.ok(dto);
+        List<ReportePersonalDiagnosticoDTO> resultado = reporteGestionService
+            .obtenerReportePersonalDiagnostico(fechaDesde, fechaHasta, diagnosticoId, cedula, grado, unidadMilitar);
+        return ResponseEntity.ok(resultado);
     }
 
-    @PreAuthorize("hasRole('ADMINISTRADOR')")
-    @GetMapping("/historial-psicologico/{personalMilitarId}")
-    public ResponseEntity<ReporteHistorialPsicologicoDTO> obtenerHistorial(
-        @PathVariable Long personalMilitarId,
-        @RequestParam(defaultValue = "true") boolean incluirSeguimientos
+    @PreAuthorize("hasAnyRole('ADMINISTRADOR','PSICOLOGO')")
+    @GetMapping("/historial-fichas")
+    public ResponseEntity<List<ReporteHistorialFichaDTO>> obtenerHistorialFichas(
+        @RequestParam(required = false) Long personalMilitarId,
+        @RequestParam(required = false) String cedula,
+        @RequestParam(required = false, defaultValue = "false") boolean incluirSeguimientos
     ) {
-        ReporteHistorialPsicologicoDTO dto = reporteGestionService
-            .obtenerHistorialPsicologico(personalMilitarId, incluirSeguimientos);
-        return ResponseEntity.ok(dto);
+        List<ReporteHistorialFichaDTO> resultado = reporteGestionService
+            .obtenerHistorialFichas(personalMilitarId, cedula, incluirSeguimientos);
+        return ResponseEntity.ok(resultado);
     }
 }

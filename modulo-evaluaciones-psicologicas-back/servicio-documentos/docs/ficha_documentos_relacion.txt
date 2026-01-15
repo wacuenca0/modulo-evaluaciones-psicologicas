@@ -1,0 +1,48 @@
+Relacion ficha psicologica - documentos digitales
+-------------------------------------------------
+
+Escenario actual
+- Cada documento digital se vincula a una ficha psicologica mediante el campo ficha_psicologica_id.
+- Se admite almacenar multiples documentos por ficha (por ejemplo test de personalidad, consentimientos, informes).
+- Se captura opcionalmente el numero de evaluacion de la ficha para facilitar trazabilidad.
+- El servicio construye automaticamente la ruta de almacenamiento local y la guarda junto con una ruta relativa para futuras integraciones.
+
+Persistencia y almacenamiento local
+- Base path configurable en documentos.storage.base-path (default ./storage/documentos).
+- Al crear o actualizar un documento se genera la carpeta ./storage/documentos/fichas/<fichaId>/ y se calcula un nombre unico basado en timestamp + nombre original normalizado.
+- ruta_almacenamiento almacena la ruta absoluta; ruta_relativa conserva la porcion relativa (fichas/<fichaId>/<archivo>). Esto permite mover el storage sin perder referencias.
+- Los archivos aun no se escriben fisicamente; la logica queda lista para incorporar escritura cuando se reciba el contenido binario.
+
+API para el front
+1. Crear documento
+   - Endpoint: POST http://localhost:8080/documentos/api/documentos/digitales
+   - Body JSON mínimo:
+     {
+       "nombreTipoDocumento": "TEST_PERSONALIDAD",
+       "fichaPsicologicaId": 123,
+       "fichaNumeroEvaluacion": "FIC-2026-00045",
+       "nombreOriginal": "test-personalidad.pdf",
+       "tipoMime": "application/pdf",
+       "tamanoBytes": 204800,
+       "descripcion": "Resultados del test de personalidad",
+       "origenModulo": "gestion",
+       "metadatos": "{\"categoria\":\"evaluacion\"}"
+     }
+   - El backend asigna ruta_almacenamiento/ruta_relativa automaticamente.
+2. Listar documentos por ficha
+   - GET http://localhost:8080/documentos/api/documentos/digitales/fichas/123
+   - Respuesta: lista de DocumentoDigitalResumenDto con id, tipo, nombre, rutas y marca temporal.
+3. Obtener detalle / descargar metadatos
+   - GET http://localhost:8080/documentos/api/documentos/digitales/{documentoId}
+   - Devuelve detalle incluyendo ruta (para futuras descargas locales) y flag activo.
+4. Actualizar metadata
+   - PUT http://localhost:8080/documentos/api/documentos/digitales/{documentoId}
+   - Permite cambiar nombre, tipo o asociar a otra ficha; si cambia la ficha o el nombre se recalcula la ruta de almacenamiento.
+5. Eliminar (soft delete)
+   - DELETE http://localhost:8080/documentos/api/documentos/digitales/{documentoId}
+   - Marca activo=false para mantener historial sin exponer en listados.
+
+Notas para futuras fases
+- Cuando se defina repositorio definitivo (S3, SharePoint, etc.) bastara con reemplazar DocumentoStorageService por un adaptador especifico.
+- Se puede agregar escritura del archivo (multipart/base64) reutilizando la ruta calculada en este flujo.
+- Se recomienda persistir tambien checksum para evitar duplicados involuntarios (ya disponible en DTO).

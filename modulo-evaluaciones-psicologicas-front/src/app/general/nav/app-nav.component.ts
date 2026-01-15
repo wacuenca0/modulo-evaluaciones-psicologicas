@@ -45,7 +45,7 @@ export class AppNavComponent {
       links.push({ label: 'Buscar Personal', route: '/psicologo/personal' });
     }
     if (esAdmin || esPsicologo) {
-      links.push({ label: 'Reportes', route: '/reportes/atenciones-psicologos' });
+      links.push({ label: 'Reportes', route: '/reportes' });
     }
     return links;
   });

@@ -129,6 +129,7 @@ public class PersonalMilitarServiceImpl implements PersonalMilitarService {
         entity.setSeguro(resolveOptional(SeguroEnum.normalizeOptional(request.getSeguro()), request.getSeguro()));
         entity.setGrado(trimOrNull(request.getGrado()));
         entity.setEspecialidad(trimOrNull(request.getEspecialidad()));
+        entity.setUnidadMilitar(trimOrNull(request.getUnidadMilitar()));
         entity.setProvincia(trimOrNull(request.getProvincia()));
         entity.setCanton(trimOrNull(request.getCanton()));
         entity.setParroquia(trimOrNull(request.getParroquia()));

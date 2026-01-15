@@ -30,6 +30,8 @@ public interface FichaPsicologicaService {
 
     FichaPsicologicaDTO actualizarEstado(Long id, String estado);
 
+    String generarNumeroEvaluacionPreview();
+
     FichaPsicologicaDTO eliminarSeccionObservacion(Long id);
 
     FichaPsicologicaDTO eliminarSeccionPsicoanamnesis(Long id);

@@ -23,6 +23,7 @@ public class PersonalMilitarDTO {
     private String seguro;
     private String grado;
     private String especialidad;
+    private String unidadMilitar;
     private String provincia;
     private String canton;
     private String parroquia;

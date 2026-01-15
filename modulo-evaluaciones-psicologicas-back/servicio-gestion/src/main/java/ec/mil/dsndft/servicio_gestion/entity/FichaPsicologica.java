@@ -6,22 +6,52 @@ import ec.mil.dsndft.servicio_gestion.model.enums.TipoEvaluacionEnum;
 import ec.mil.dsndft.servicio_gestion.model.value.DiagnosticoCie10;
 import ec.mil.dsndft.servicio_gestion.model.value.ObservacionClinica;
 import ec.mil.dsndft.servicio_gestion.model.value.PlanSeguimiento;
+import ec.mil.dsndft.servicio_gestion.model.value.TransferenciaInfo;
 import ec.mil.dsndft.servicio_gestion.model.value.PsicoanamnesisInfancia;
 import ec.mil.dsndft.servicio_gestion.model.value.PsicoanamnesisNatal;
 import ec.mil.dsndft.servicio_gestion.model.value.PsicoanamnesisPrenatal;
-import jakarta.persistence.*;
-import lombok.*;
-import org.hibernate.annotations.NotFound;
-import org.hibernate.annotations.NotFoundAction;
+import jakarta.persistence.AttributeOverride;
+import jakarta.persistence.AttributeOverrides;
+import jakarta.persistence.Column;
+import jakarta.persistence.ConstraintMode;
+import jakarta.persistence.Embedded;
+import jakarta.persistence.Entity;
+import jakarta.persistence.EnumType;
+import jakarta.persistence.Enumerated;
+import jakarta.persistence.FetchType;
+import jakarta.persistence.GeneratedValue;
+import jakarta.persistence.GenerationType;
+import jakarta.persistence.Id;
+import jakarta.persistence.ForeignKey;
+import jakarta.persistence.Index;
+import jakarta.persistence.JoinColumn;
+import jakarta.persistence.ManyToOne;
+import jakarta.persistence.PrePersist;
+import jakarta.persistence.PreUpdate;
+import jakarta.persistence.SequenceGenerator;
+import jakarta.persistence.Table;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import lombok.AllArgsConstructor;
+import lombok.Builder;
+import lombok.Data;
+import lombok.EqualsAndHashCode;
+import lombok.NoArgsConstructor;
+import lombok.ToString;
+import org.hibernate.annotations.NotFound;
+import org.hibernate.annotations.NotFoundAction;
 
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
 @Entity
-@Table(name = "fichas_psicologicas")
+@Table(
+    name = "fichas_psicologicas",
+    indexes = {
+        @Index(name = "ix_fichas_psicologicas_cie", columnList = "catalogo_cie10_id")
+    }
+)
 public class FichaPsicologica {
 
     @Id
@@ -37,6 +67,16 @@ public class FichaPsicologica {
     @JoinColumn(name = "psicologo_id", nullable = false, foreignKey = @ForeignKey(value = ConstraintMode.NO_CONSTRAINT))
     @NotFound(action = NotFoundAction.IGNORE)
     private Psicologo psicologo;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "creado_por_psicologo_id", foreignKey = @ForeignKey(value = ConstraintMode.NO_CONSTRAINT))
+    @NotFound(action = NotFoundAction.IGNORE)
+    private Psicologo creadoPor;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "actualizado_por_psicologo_id", foreignKey = @ForeignKey(value = ConstraintMode.NO_CONSTRAINT))
+    @NotFound(action = NotFoundAction.IGNORE)
+    private Psicologo actualizadoPor;
 
     @Column(nullable = false, unique = true, length = 40)
     private String numeroEvaluacion;
@@ -95,11 +135,26 @@ public class FichaPsicologica {
     @Column(name = "condicion_clinica", nullable = false, length = 40)
     private CondicionClinicaEnum condicionClinica = CondicionClinicaEnum.ALTA;
 
+    @EqualsAndHashCode.Exclude
+    @ToString.Exclude
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "catalogo_cie10_id", foreignKey = @ForeignKey(name = "fk_fichas_psicologicas_catalogo_cie"))
+    private CatalogoDiagnosticoCie10 diagnosticoCie10Catalogo;
+
     @Embedded
     private DiagnosticoCie10 diagnosticoCie10;
 
     @Embedded
     private PlanSeguimiento planSeguimiento;
+
+    @Embedded
+    private TransferenciaInfo transferenciaInfo;
+
+    @Column(name = "ultima_fecha_seguimiento")
+    private LocalDate ultimaFechaSeguimiento;
+
+    @Column(name = "proximo_seguimiento")
+    private LocalDate proximoSeguimiento;
 
     @Builder.Default
     @Column(name = "created_at", nullable = false, updatable = false)

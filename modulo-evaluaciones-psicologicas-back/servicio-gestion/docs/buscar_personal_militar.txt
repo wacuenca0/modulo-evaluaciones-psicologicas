@@ -1,0 +1,793 @@
+================================================================================
+GUÍA: BUSCAR PERSONAL MILITAR
+================================================================================
+
+DESCRIPCIÓN GENERAL:
+Endpoint para buscar personal militar en el sistema. Soporta búsqueda por cédula
+(exacta) y por nombres/apellidos (parcial, con paginación). Utilizado principalmente
+en el módulo de evaluaciones psicológicas para localizar al personal antes de 
+crear o actualizar su ficha.
+
+================================================================================
+ENDPOINT PRINCIPAL
+================================================================================
+
+URL: GET /gestion/api/personal-militar/buscar
+
+MÉTODO: GET
+
+AUTENTICACIÓN: 
+Requiere token Bearer con rol ADMINISTRADOR o PSICOLOGO
+
+DESCRIPCIÓN:
+Busca personal militar con dos criterios posibles:
+1. Por cédula (búsqueda exacta, retorna 1 resultado)
+2. Por nombres/apellidos (búsqueda parcial, retorna página de resultados)
+
+================================================================================
+CASO 1: BUSCAR POR CÉDULA (BÚSQUEDA EXACTA)
+================================================================================
+
+PARÁMETRO DE QUERY:
+- cedula (string, obligatorio): Número de cédula exacto sin guiones
+
+EJEMPLO URL:
+GET http://localhost:8082/gestion/api/personal-militar/buscar?cedula=0102030405
+
+PARÁMETRO DE HEADER:
+Authorization: Bearer <token_jwt>
+
+RESPUESTA EXITOSA (200 OK):
+{
+  "id": 15,
+  "cedula": "0102030405",
+  "apellidosNombres": "González López Daniel",
+  "apellidos": "González López",
+  "nombres": "Daniel",
+  "tipoPersona": "Militar",
+  "esMilitar": true,
+  "fechaNacimiento": "1990-05-15",
+  "edad": 35,
+  "sexo": "Masculino",
+  "etnia": "Mestizo",
+  "estadoCivil": "Casado",
+  "numeroHijos": 2,
+  "ocupacion": "Oficial",
+  "servicioActivo": true,
+  "servicioPasivo": false,
+  "seguro": "IESS",
+  "grado": "Teniente",
+  "especialidad": "Infantería",
+  "provincia": "Pichincha",
+  "canton": "Quito",
+  "parroquia": "La Mariscal",
+  "barrioSector": "Centro",
+  "telefono": "022123456",
+  "celular": "0987654321",
+  "email": "daniel.gonzalez@military.ec",
+  "activo": true,
+  "unidadMilitar": "Batallón Pichincha"
+}
+
+ERRORES POSIBLES:
+
+1. CÉDULA NO ENCONTRADA (404 NOT FOUND):
+{
+  "timestamp": "2026-01-12T15:30:00",
+  "status": 404,
+  "error": "Not Found",
+  "message": "Personal militar no encontrado"
+}
+
+2. SIN TOKEN (401 UNAUTHORIZED):
+{
+  "timestamp": "2026-01-12T15:30:00",
+  "status": 401,
+  "error": "Unauthorized",
+  "message": "Token inválido o expirado"
+}
+
+3. SIN AUTORIZACIÓN (403 FORBIDDEN):
+{
+  "timestamp": "2026-01-12T15:30:00",
+  "status": 403,
+  "error": "Forbidden",
+  "message": "No tiene permisos para acceder a este recurso"
+}
+
+NOTAS:
+✓ Búsqueda exacta: debe coincidir completamente la cédula
+✓ Case insensitive: "0102030405" = "0102030405"
+✓ Sin guiones: enviar "0102030405" y no "010-203-0405"
+✓ Retorna un objeto único, no una lista
+
+================================================================================
+CASO 2: BUSCAR POR NOMBRES/APELLIDOS (BÚSQUEDA PARCIAL CON PAGINACIÓN)
+================================================================================
+
+PARÁMETROS DE QUERY:
+- apellidos, nombres, o termino (string): Al menos UNO obligatorio
+  * apellidos: Busca en el campo apellidos
+  * nombres: Busca en el campo nombres
+  * termino: Busca en nombres completos (apellidosNombres)
+- page (integer, opcional): Página a recuperar. Default: 0
+- size (integer, opcional): Cantidad de resultados por página. Default: 10
+
+EJEMPLOS URL:
+
+1. Buscar por apellidos:
+GET http://localhost:8082/gestion/api/personal-militar/buscar?apellidos=González&page=0&size=10
+
+2. Buscar por nombres:
+GET http://localhost:8082/gestion/api/personal-militar/buscar?nombres=Daniel&page=0&size=10
+
+3. Buscar por término (nombres completos):
+GET http://localhost:8082/gestion/api/personal-militar/buscar?termino=gonzalez%20daniel&page=0&size=10
+
+4. Búsqueda simple (sin página):
+GET http://localhost:8082/gestion/api/personal-militar/buscar?apellidos=López
+
+PARÁMETRO DE HEADER:
+Authorization: Bearer <token_jwt>
+
+RESPUESTA EXITOSA (200 OK):
+{
+  "content": [
+    {
+      "id": 15,
+      "cedula": "0102030405",
+      "apellidosNombres": "González López Daniel",
+      "apellidos": "González López",
+      "nombres": "Daniel",
+      "tipoPersona": "Militar",
+      "esMilitar": true,
+      "fechaNacimiento": "1990-05-15",
+      "edad": 35,
+      "sexo": "Masculino",
+      "etnia": "Mestizo",
+      "estadoCivil": "Casado",
+      "numeroHijos": 2,
+      "ocupacion": "Oficial",
+      "servicioActivo": true,
+      "servicioPasivo": false,
+      "seguro": "IESS",
+      "grado": "Teniente",
+      "especialidad": "Infantería",
+      "provincia": "Pichincha",
+      "canton": "Quito",
+      "parroquia": "La Mariscal",
+      "barrioSector": "Centro",
+      "telefono": "022123456",
+      "celular": "0987654321",
+      "email": "daniel.gonzalez@military.ec",
+      "activo": true,
+      "unidadMilitar": "Batallón Pichincha"
+    },
+    {
+      "id": 16,
+      "cedula": "0103040506",
+      "apellidosNombres": "González López Juan",
+      "apellidos": "González López",
+      "nombres": "Juan",
+      ...resto de campos...
+    }
+  ],
+  "pageable": {
+    "pageNumber": 0,
+    "pageSize": 10,
+    "sort": {
+      "empty": false,
+      "sorted": true,
+      "unsorted": false
+    },
+    "offset": 0,
+    "paged": true,
+    "unpaged": false
+  },
+  "totalElements": 25,
+  "totalPages": 3,
+  "last": false,
+  "size": 10,
+  "number": 0,
+  "sort": {
+    "empty": false,
+    "sorted": true,
+    "unsorted": false
+  },
+  "numberOfElements": 10,
+  "first": true,
+  "empty": false
+}
+
+ESTRUCTURA DE PAGINACIÓN:
+- content: Array de resultados
+- totalElements: Cantidad total de registros encontrados
+- totalPages: Cantidad total de páginas
+- number: Número de página actual (0-indexed)
+- size: Cantidad de resultados en esta página
+- first: True si es la primera página
+- last: True si es la última página
+- isEmpty: True si no hay resultados
+
+ERRORES POSIBLES:
+
+1. SIN CRITERIO DE BÚSQUEDA (400 BAD REQUEST):
+{
+  "timestamp": "2026-01-12T15:30:00",
+  "status": 400,
+  "error": "Bad Request",
+  "mensaje": "Debe proporcionar cédula, nombres o apellidos para realizar la búsqueda"
+}
+
+2. SIN RESULTADOS (200 OK CON content VACÍO):
+{
+  "content": [],
+  "pageable": { ...paginación... },
+  "totalElements": 0,
+  "totalPages": 0,
+  "last": true,
+  "size": 10,
+  "number": 0,
+  "numberOfElements": 0,
+  "first": true,
+  "empty": true
+}
+
+3. PÁGINA FUERA DE RANGO (200 OK PERO CON content VACÍO):
+GET /buscar?apellidos=López&page=999&size=10
+↓ Retorna página vacía pero válida si la página existe
+
+NOTAS:
+✓ Búsqueda parcial: "López" coincide con "González López", "López García", etc.
+✓ Case insensitive: "LOPEZ" = "López" = "lopez"
+✓ Ordenado: Los resultados se ordenan alfabéticamente por apellidosNombres ASC
+✓ Default page: 0 (primera página)
+✓ Default size: 10 resultados por página
+✓ Max size: No hay límite especificado, pero 100 es razonable
+
+================================================================================
+CAMPOS DE RESPUESTA EXPLICADOS
+================================================================================
+
+id (Long):
+- Identificador único del personal militar en el sistema
+- Requerido para crear ficha psicológica
+- Usar como personalMilitarId en otros endpoints
+
+cedula (String):
+- Número de cédula nacional único
+- Máximo 15 caracteres
+- Puede ser null en algunos registros antiguos
+
+apellidosNombres (String):
+- Nombre completo concatenado: "Apellidos Nombres"
+- Campo principal para mostrar en interfaces
+- Ordenamiento se basa en este campo
+
+apellidos (String):
+- Solo el apellido/s del personal
+- Puede ser null
+
+nombres (String):
+- Solo el nombre/s del personal
+- Puede ser null
+
+tipoPersona (String):
+- Clasificación del personal
+- Valores posibles: "Militar", "Dependiente", "Aspirante", "Civil"
+
+esMilitar (Boolean):
+- Indicador específico si es personal militar activo
+- True: Es militar, False: No es militar
+
+fechaNacimiento (String):
+- Formato: "YYYY-MM-DD"
+- Ejemplo: "1990-05-15"
+- Puede ser null
+
+edad (Integer):
+- Edad calculada o declarada
+- Puede ser null
+- Si falta fecha, se usa este campo
+
+sexo (String):
+- Valores: "Masculino" o "Femenino"
+- Obligatorio en validación
+
+etnia (String):
+- Autoclasificación étnica
+- Valores posibles: "Mestizo", "Indígena", "Afroecuatoriano", "Blanco", "Montubio"
+- Puede ser null
+
+estadoCivil (String):
+- Estado civil
+- Valores: "Soltero", "Casado", "Divorciado", "Viudo", "Unión libre"
+- Puede ser null
+
+numeroHijos (Integer):
+- Cantidad de hijos
+- Puede ser null
+
+ocupacion (String):
+- Profesión u ocupación civil
+- Ejemplo: "Ingeniero", "Médico", "Oficial"
+- Puede ser null
+
+servicioActivo (Boolean):
+- True: Personal en servicio activo
+- False: No está en servicio activo
+
+servicioPasivo (Boolean):
+- True: Personal en servicio pasivo/retirado
+- False: No está en servicio pasivo
+
+seguro (String):
+- Tipo de seguro médico
+- Valores: "IESS", "ISAPRES", "FUERZAS_ARMADAS", etc.
+- Puede ser null
+
+grado (String):
+- Rango militar
+- Ejemplos: "Teniente", "Capitán", "Sargento", "Soldado", "Cadete"
+- Puede ser null
+
+especialidad (String):
+- Especialidad militar o profesional
+- Ejemplos: "Infantería", "Aviación", "Logística"
+- Puede ser null
+
+provincia (String):
+- Provincia de domicilio
+- Ejemplo: "Pichincha", "Guayas", "Azuay"
+- Puede ser null
+
+canton (String):
+- Cantón de domicilio
+- Ejemplo: "Quito", "Guayaquil"
+- Puede ser null
+
+parroquia (String):
+- Parroquia de domicilio
+- Ejemplo: "La Mariscal", "Centro"
+- Puede ser null
+
+barrioSector (String):
+- Barrio o sector específico
+- Puede ser null
+
+telefono (String):
+- Teléfono fijo
+- Formato: Puede incluir o no guiones/espacios
+- Puede ser null
+
+celular (String):
+- Número de celular
+- Puede ser null
+
+email (String):
+- Dirección de correo electrónico
+- Puede ser null
+
+activo (Boolean):
+- True: Registro activo en sistema
+- False: Registro inactivo/eliminado lógicamente
+
+unidadMilitar (String):
+- Unidad o batallón asignado
+- Ejemplo: "Batallón Pichincha", "Escuela Militar"
+- Puede ser null
+
+================================================================================
+FLUJO RECOMENDADO EN EL FRONTEND
+================================================================================
+
+1. PANTALLA DE BÚSQUEDA INICIAL
+   ├── Input de cédula (obligatorio o apellidos/nombres)
+   ├── Input de apellidos (alternativo a cédula)
+   ├── Input de nombres (alternativo a cédula)
+   └── Botón "Buscar"
+
+2. VALIDACIÓN EN FRONTEND
+   ├── Validar que al menos un campo esté completo
+   ├── Trimear espacios en blanco
+   ├── No requerir caracteres especiales (guiones en cédula opcionales)
+   └── Mostrar mensaje si ambos criterios están vacíos
+
+3. LLAMADA A ENDPOINT
+   ├── Si solo cédula: GET /buscar?cedula=...
+   ├── Si apellidos: GET /buscar?apellidos=...&page=0&size=10
+   ├── Incluir token en header: Authorization: Bearer <token>
+   └── Mostrar loading mientras procesa
+
+4. PROCESAR RESPUESTA
+
+   A. Si búsqueda por cédula:
+      ├── Si 200 OK: Mostrar detalles del personal
+      ├── Si 404: Mostrar "Personal no encontrado"
+      └── Si 400: Mostrar error de validación
+
+   B. Si búsqueda por apellidos/nombres:
+      ├── Si 200 OK con content no vacío: Mostrar tabla paginada
+      ├── Si 200 OK con content vacío: Mostrar "Sin resultados"
+      ├── Mostrar botones "Anterior" y "Siguiente" según first/last
+      └── Mostrar "Página X de Y" donde X=number+1, Y=totalPages
+
+5. SELECCIÓN Y SIGUIENTE PASO
+   ├── Al hacer clic en un resultado:
+   │   └── Capturar el ID del personal
+   ├── Si existe ficha psicológica:
+   │   └── Permitir actualizar ficha
+   ├── Si no existe ficha psicológica:
+   │   └── Permitir crear nueva ficha
+   └── Usar personalMilitarId en POST/PUT de fichas
+
+================================================================================
+EJEMPLOS DE USO DESDE FRONTEND
+================================================================================
+
+EJEMPLO 1: BÚSQUEDA POR CÉDULA EN ANGULAR/REACT
+--------------------------------------------------
+
+const buscarPorCedula = async (cedula: string) => {
+  if (!cedula || cedula.trim().length === 0) {
+    setError('Ingresa una cédula válida');
+    return;
+  }
+
+  setLoading(true);
+  setError(null);
+  setResultado(null);
+
+  try {
+    const response = await fetch(
+      `${API_BASE}/gestion/api/personal-militar/buscar?cedula=${cedula.trim()}`,
+      {
+        method: 'GET',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        }
+      }
+    );
+
+    if (response.ok) {
+      const data = await response.json();
+      setResultado(data);
+      console.log('Personal encontrado:', data);
+      // Usar data.id como personalMilitarId
+    } else if (response.status === 404) {
+      setError('Personal no encontrado. Verifica la cédula.');
+    } else if (response.status === 400) {
+      const err = await response.json();
+      setError(err.mensaje || 'Error en la búsqueda');
+    } else {
+      setError('Error al buscar personal');
+    }
+  } catch (err) {
+    setError('Error de red al buscar personal');
+    console.error(err);
+  } finally {
+    setLoading(false);
+  }
+};
+
+EJEMPLO 2: BÚSQUEDA POR APELLIDOS CON PAGINACIÓN
+-------------------------------------------------
+
+const buscarPorApellidos = async (apellidos: string, pageNumber: number = 0) => {
+  if (!apellidos || apellidos.trim().length === 0) {
+    setError('Ingresa un apellido para buscar');
+    return;
+  }
+
+  setLoading(true);
+  setError(null);
+
+  try {
+    const params = new URLSearchParams({
+      apellidos: apellidos.trim(),
+      page: String(pageNumber),
+      size: '10'
+    });
+
+    const response = await fetch(
+      `${API_BASE}/gestion/api/personal-militar/buscar?${params}`,
+      {
+        method: 'GET',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        }
+      }
+    );
+
+    if (response.ok) {
+      const data = await response.json();
+      setResultados(data.content);
+      setPaginacion({
+        currentPage: data.number,
+        totalPages: data.totalPages,
+        totalElements: data.totalElements,
+        hasNext: !data.last,
+        hasPrev: !data.first
+      });
+
+      if (data.content.length === 0) {
+        setError('Sin resultados encontrados');
+      }
+    } else if (response.status === 400) {
+      const err = await response.json();
+      setError(err.mensaje);
+    } else {
+      setError('Error al buscar personal');
+    }
+  } catch (err) {
+    setError('Error de red');
+    console.error(err);
+  } finally {
+    setLoading(false);
+  }
+};
+
+EJEMPLO 3: COMPONENTE REACT CON TABLA DE RESULTADOS
+----------------------------------------------------
+
+function BuscarPersonal() {
+  const [cedula, setCedula] = useState('');
+  const [apellidos, setApellidos] = useState('');
+  const [loading, setLoading] = useState(false);
+  const [resultado, setResultado] = useState(null);
+  const [resultados, setResultados] = useState([]);
+  const [paginacion, setPaginacion] = useState({
+    currentPage: 0,
+    totalPages: 0,
+    hasNext: false,
+    hasPrev: false
+  });
+  const [error, setError] = useState(null);
+
+  const manejarBusqueda = (e) => {
+    e.preventDefault();
+    
+    if (cedula) {
+      buscarPorCedula(cedula);
+    } else if (apellidos) {
+      buscarPorApellidos(apellidos, 0);
+    }
+  };
+
+  return (
+    <div className="search-container">
+      <form onSubmit={manejarBusqueda} className="search-form">
+        <div className="form-group">
+          <label>Cédula (búsqueda exacta):</label>
+          <input
+            type="text"
+            value={cedula}
+            onChange={(e) => {
+              setCedula(e.target.value);
+              setApellidos(''); // Limpiar el otro criterio
+            }}
+            placeholder="0102030405"
+            maxLength="15"
+          />
+        </div>
+
+        <div className="divider">O</div>
+
+        <div className="form-group">
+          <label>Apellidos (búsqueda parcial):</label>
+          <input
+            type="text"
+            value={apellidos}
+            onChange={(e) => {
+              setApellidos(e.target.value);
+              setCedula(''); // Limpiar el otro criterio
+            }}
+            placeholder="Ej: González"
+          />
+        </div>
+
+        <button type="submit" disabled={loading}>
+          {loading ? 'Buscando...' : 'Buscar'}
+        </button>
+      </form>
+
+      {error && <div className="error-message">{error}</div>}
+
+      {/* RESULTADO ÚNICO (por cédula) */}
+      {resultado && (
+        <div className="resultado-unico">
+          <h3>Personal encontrado:</h3>
+          <div className="tarjeta-personal">
+            <p><strong>Nombre:</strong> {resultado.apellidosNombres}</p>
+            <p><strong>Cédula:</strong> {resultado.cedula}</p>
+            <p><strong>Grado:</strong> {resultado.grado}</p>
+            <p><strong>Unidad:</strong> {resultado.unidadMilitar}</p>
+            <button onClick={() => irAEvaluacion(resultado.id)}>
+              Crear/Actualizar Evaluación
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* TABLA PAGINADA (por apellidos) */}
+      {resultados.length > 0 && (
+        <div className="resultados-tabla">
+          <h3>Resultados encontrados: {paginacion.totalElements}</h3>
+          <table>
+            <thead>
+              <tr>
+                <th>Nombre</th>
+                <th>Cédula</th>
+                <th>Grado</th>
+                <th>Unidad</th>
+                <th>Acción</th>
+              </tr>
+            </thead>
+            <tbody>
+              {resultados.map(persona => (
+                <tr key={persona.id}>
+                  <td>{persona.apellidosNombres}</td>
+                  <td>{persona.cedula}</td>
+                  <td>{persona.grado}</td>
+                  <td>{persona.unidadMilitar}</td>
+                  <td>
+                    <button onClick={() => irAEvaluacion(persona.id)}>
+                      Evaluar
+                    </button>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+
+          <div className="paginacion">
+            <button
+              onClick={() => buscarPorApellidos(apellidos, paginacion.currentPage - 1)}
+              disabled={!paginacion.hasPrev}
+            >
+              ← Anterior
+            </button>
+
+            <span>
+              Página {paginacion.currentPage + 1} de {paginacion.totalPages}
+            </span>
+
+            <button
+              onClick={() => buscarPorApellidos(apellidos, paginacion.currentPage + 1)}
+              disabled={!paginacion.hasNext}
+            >
+              Siguiente →
+            </button>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+================================================================================
+VALIDACIONES RECOMENDADAS EN FRONTEND
+================================================================================
+
+ANTES DE ENVIAR BÚSQUEDA:
+✓ Validar que al menos un criterio esté completo
+✓ Trimear espacios en blanco
+✓ Si es cédula, validar que tenga 10-13 dígitos
+✓ No es necesario validar formato de apellidos/nombres
+
+EN LA RESPUESTA:
+✓ Si está vacío resultados, mostrar "Sin resultados"
+✓ Verificar totalElements > 0 para paginación válida
+✓ Desabilitar botón "Anterior" en primera página (first=true)
+✓ Desabilitar botón "Siguiente" en última página (last=true)
+
+MANEJO DE ERRORES:
+✓ 401/403: Redirigir a login o mostrar "Sin autorización"
+✓ 404: Mostrar "Personal no encontrado"
+✓ 400: Mostrar error específico del servidor
+✓ Error de red: Mostrar "Error de conexión, intenta de nuevo"
+
+================================================================================
+CASOS DE USO
+================================================================================
+
+CASO 1: Evaluación inicial rápida
+Usuario: Psicólogo
+Acción: "Tengo la cédula, buscarlo y evaluar"
+├── Ingresa cédula "0102030405"
+├── GET /buscar?cedula=0102030405
+├── Obtiene resultado único con ID
+└── Crea nueva FichaPsicológica con ese ID
+
+CASO 2: Revisión de personal de una unidad
+Usuario: Administrador
+Acción: "Mostrar todos del Batallón Pichincha"
+├── Busca por apellido o término genérico: "Pichincha"
+├── GET /buscar?apellidos=Pichincha&page=0&size=50
+├── Obtiene página de resultados
+└── Puede navegar páginas para ver más personal
+
+CASO 3: Búsqueda de caso anterior
+Usuario: Psicólogo
+Acción: "Recordar nombre, no la cédula"
+├── Busca por apellido: "González"
+├── GET /buscar?apellidos=González&page=0
+├── Obtiene lista paginada
+├── Identifica visualmente: "González López Daniel"
+└── Hace clic y accede a su ficha anterior
+
+CASO 4: Actualización de datos personales
+Usuario: Administrador
+Acción: "Modificar datos del personal"
+├── Busca exacto: cédula
+├── GET /buscar?cedula=0102030405
+├── Obtiene datos actuales
+├── Modifica y guarda con PUT /api/personal-militar/{id}
+└── Confirma cambios
+
+================================================================================
+PREGUNTAS FRECUENTES
+================================================================================
+
+P: ¿Qué diferencia hay entre buscar por cédula y por apellidos?
+R: Cédula retorna exactamente 1 resultado (o 404). Apellidos retorna página con 
+   múltiples resultados (0 a 10+). Usa cédula si tienes el número, usa apellidos
+   si necesitas explorar.
+
+P: ¿Puedo omitir los parámetros page y size?
+R: Sí. Usará defaults: page=0, size=10. Recomendado incluirlos para claridad.
+
+P: ¿Diferencía entre "nombres" y "termino"?
+R: "nombres": Solo busca en el campo nombres (Ej: "Daniel")
+   "apellidos": Solo busca en apellidos (Ej: "González")
+   "termino": Busca en nombres completos (Ej: "González Daniel")
+   Usa "termino" para búsqueda general.
+
+P: ¿Los resultados están ordenados?
+R: Sí, alfabéticamente por apellidosNombres (ASC). Siempre igual orden en
+   mismas búsqueda.
+
+P: ¿Qué pasa si la cédula tiene guiones?
+R: Soporta con o sin guiones. "010-203-0405" = "0102030405"
+
+P: ¿Hay búsqueda por email o teléfono?
+R: No. Solo cédula, apellidos y nombres. Para otros campos, obtén por ID.
+
+P: ¿Cuántos resultados máximo por página?
+R: No hay límite teórico, pero se recomienda mantener size ≤ 100.
+
+P: ¿Qué significa servicioActivo = true?
+R: Personal está en servicio activo. Si false, está retirado o en otro estado.
+
+P: ¿Qué pasa si actualizo personal después de obtenerlo?
+R: Los datos retornados por este endpoint son de lectura. Usar PUT para cambios.
+
+================================================================================
+INTEGRACIÓN CON OTROS ENDPOINTS
+================================================================================
+
+DESPUÉS DE BUSCAR:
+1. Obtener ID del personal (resultado.id)
+2. Crear ficha psicológica:
+   POST /gestion/api/fichas-psicologicas
+   Body: { personalMilitarId: <ID> }
+
+3. Obtener detalles con más información:
+   GET /gestion/api/personal-militar/{id}
+
+4. Actualizar datos personales:
+   PUT /gestion/api/personal-militar/{id}
+   Body: { datos actualizados }
+
+ENDPOINTS RELACIONADOS:
+- GET /gestion/api/fichas-psicologicas?personalMilitarId=<ID>
+  → Obtener historial de evaluaciones de este personal
+  
+- GET /gestion/api/fichas-psicologicas/{fichaId}
+  → Obtener una evaluación específica
+
+================================================================================
+FIN DEL DOCUMENTO
+================================================================================

@@ -46,10 +46,21 @@ export class PersonalMilitarService {
       return '/gestion/api/personal-militar';
     }
     const normalized = base.replace(/\/$/, '');
-    if (/\/personal-militar$/i.test(normalized)) {
-      return normalized;
+    
+    // If it's an absolute URL, extract only the path portion
+    let path = normalized;
+    if (normalized.startsWith('http://') || normalized.startsWith('https://')) {
+      try {
+        path = new URL(normalized).pathname;
+      } catch {
+        path = normalized;
+      }
     }
-    return `${normalized}/personal-militar`;
+    
+    if (/\/personal-militar$/i.test(path)) {
+      return path;
+    }
+    return `${path}/personal-militar`;
   }
 
   private toApiPayload(payload: PersonalMilitarPayload): Record<string, unknown> {

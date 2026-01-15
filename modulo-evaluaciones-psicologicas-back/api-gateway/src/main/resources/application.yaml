@@ -40,6 +40,12 @@ spring:
             - Path=/gestion/**
           filters:
             - StripPrefix=1
+        - id: servicio-gestion-api
+          uri: ${SERVICIO_GESTION_URL:http://127.0.0.1:8082}
+          predicates:
+            - Path=/api/catalogos/cie10,/api/catalogos/cie10/**,/api/seguimientos-psicologicos,/api/seguimientos-psicologicos/**,/api/fichas-psicologicas,/api/fichas-psicologicas/**,/api/personal-militar,/api/personal-militar/**,/api/psicologos,/api/psicologos/**,/api/reportes,/api/reportes/**
+          filters:
+            - PrefixPath=/gestion
         - id: servicio-documentos
           uri: ${SERVICIO_DOCUMENTOS_URL:http://127.0.0.1:8083}
           predicates:

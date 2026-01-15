@@ -2,38 +2,19 @@ package ec.mil.dsndft.servicio_gestion.model.mapper;
 
 import ec.mil.dsndft.servicio_gestion.entity.FichaPsicologica;
 import ec.mil.dsndft.servicio_gestion.model.dto.FichaPsicologicaDTO;
+import ec.mil.dsndft.servicio_gestion.model.dto.HistoriaPasadaEnfermedadDTO;
+import ec.mil.dsndft.servicio_gestion.model.dto.HospitalizacionRehabilitacionDTO;
 import ec.mil.dsndft.servicio_gestion.model.dto.ObservacionClinicaSectionDTO;
 import ec.mil.dsndft.servicio_gestion.model.dto.PsicoanamnesisInfanciaDTO;
 import ec.mil.dsndft.servicio_gestion.model.dto.PsicoanamnesisNatalDTO;
 import ec.mil.dsndft.servicio_gestion.model.dto.PsicoanamnesisPrenatalDTO;
-import org.mapstruct.Builder;
-import org.mapstruct.Mapper;
-import org.mapstruct.Mapping;
-import org.mapstruct.ReportingPolicy;
+import ec.mil.dsndft.servicio_gestion.model.value.TransferenciaInfo;
 
+import java.time.LocalDate;
 import java.util.List;
 
-@Mapper(componentModel = "spring", unmappedTargetPolicy = ReportingPolicy.IGNORE, builder = @Builder(disableBuilder = true))
 public interface FichaPsicologicaMapper {
 
-    @Mapping(target = "personalMilitarId", source = "personalMilitar.id")
-    @Mapping(target = "personalMilitarNombre", source = "personalMilitar.apellidosNombres")
-    @Mapping(target = "personalMilitarCedula", source = "personalMilitar.cedula")
-    @Mapping(target = "psicologoId", source = "psicologo.id")
-    @Mapping(target = "psicologoNombre", source = "psicologo.apellidosNombres")
-    @Mapping(target = "psicologoUsername", source = "psicologo.username")
-    @Mapping(target = "tipoEvaluacion", expression = "java(mapTipoEvaluacion(entity.getTipoEvaluacion()))")
-    @Mapping(target = "seccionObservacion", expression = "java(mapObservacion(entity.getSeccionObservacion()))")
-    @Mapping(target = "seccionPrenatal", expression = "java(mapPrenatal(entity.getSeccionPrenatal()))")
-    @Mapping(target = "seccionNatal", expression = "java(mapNatal(entity.getSeccionNatal()))")
-    @Mapping(target = "seccionInfancia", expression = "java(mapInfancia(entity.getSeccionInfancia()))")
-    @Mapping(target = "estado", expression = "java(mapEstado(entity.getEstado()))")
-    @Mapping(target = "condicion", expression = "java(mapCondicion(entity.getCondicionClinica()))")
-    @Mapping(target = "diagnosticoCie10Codigo", expression = "java(mapDiagnosticoCodigo(entity.getDiagnosticoCie10()))")
-    @Mapping(target = "diagnosticoCie10Descripcion", expression = "java(mapDiagnosticoDescripcion(entity.getDiagnosticoCie10()))")
-    @Mapping(target = "planFrecuencia", expression = "java(mapPlanFrecuencia(entity.getPlanSeguimiento()))")
-    @Mapping(target = "planTipoSesion", expression = "java(mapPlanTipoSesion(entity.getPlanSeguimiento()))")
-    @Mapping(target = "planDetalle", expression = "java(mapPlanDetalle(entity.getPlanSeguimiento()))")
     FichaPsicologicaDTO toDTO(FichaPsicologica entity);
 
     List<FichaPsicologicaDTO> toDTOs(List<FichaPsicologica> entities);
@@ -58,6 +39,30 @@ public interface FichaPsicologicaMapper {
         dto.setObservacionClinica(observacion.getObservacionClinica());
         dto.setMotivoConsulta(observacion.getMotivoConsulta());
         dto.setEnfermedadActual(observacion.getEnfermedadActual());
+        dto.setHistoriaPasadaEnfermedad(mapHistoriaPasada(observacion.getHistoriaPasadaEnfermedad()));
+        return dto;
+    }
+
+    default HistoriaPasadaEnfermedadDTO mapHistoriaPasada(ec.mil.dsndft.servicio_gestion.model.value.HistoriaPasadaEnfermedad historia) {
+        if (historia == null) {
+            return null;
+        }
+        HistoriaPasadaEnfermedadDTO dto = new HistoriaPasadaEnfermedadDTO();
+        dto.setDescripcion(historia.getDescripcion());
+        dto.setTomaMedicacion(historia.getTomaMedicacion());
+        dto.setTipoMedicacion(historia.getTipoMedicacion());
+        dto.setHospitalizacionRehabilitacion(mapHospitalizacion(historia.getHospitalizacionRehabilitacion()));
+        return dto;
+    }
+
+    default HospitalizacionRehabilitacionDTO mapHospitalizacion(ec.mil.dsndft.servicio_gestion.model.value.HospitalizacionRehabilitacion hospitalizacion) {
+        if (hospitalizacion == null) {
+            return null;
+        }
+        HospitalizacionRehabilitacionDTO dto = new HospitalizacionRehabilitacionDTO();
+        dto.setRequiere(hospitalizacion.getRequiere());
+        dto.setTipo(hospitalizacion.getTipo());
+        dto.setDuracion(hospitalizacion.getDuracion());
         return dto;
     }
 
@@ -103,8 +108,24 @@ public interface FichaPsicologicaMapper {
         return diagnostico != null ? diagnostico.getCodigo() : null;
     }
 
+    default Long mapDiagnosticoId(ec.mil.dsndft.servicio_gestion.entity.CatalogoDiagnosticoCie10 diagnosticoCatalogo) {
+        return diagnosticoCatalogo != null ? diagnosticoCatalogo.getId() : null;
+    }
+
     default String mapDiagnosticoDescripcion(ec.mil.dsndft.servicio_gestion.model.value.DiagnosticoCie10 diagnostico) {
         return diagnostico != null ? diagnostico.getDescripcion() : null;
+    }
+
+    default String mapDiagnosticoNombre(ec.mil.dsndft.servicio_gestion.model.value.DiagnosticoCie10 diagnostico) {
+        return diagnostico != null ? diagnostico.getNombre() : null;
+    }
+
+    default String mapDiagnosticoCategoriaPadre(ec.mil.dsndft.servicio_gestion.model.value.DiagnosticoCie10 diagnostico) {
+        return diagnostico != null ? diagnostico.getCategoriaPadre() : null;
+    }
+
+    default Integer mapDiagnosticoNivel(ec.mil.dsndft.servicio_gestion.model.value.DiagnosticoCie10 diagnostico) {
+        return diagnostico != null ? diagnostico.getNivel() : null;
     }
 
     default String mapPlanFrecuencia(ec.mil.dsndft.servicio_gestion.model.value.PlanSeguimiento plan) {
@@ -117,5 +138,17 @@ public interface FichaPsicologicaMapper {
 
     default String mapPlanDetalle(ec.mil.dsndft.servicio_gestion.model.value.PlanSeguimiento plan) {
         return plan != null ? plan.getDetalle() : null;
+    }
+
+    default LocalDate mapTransferenciaFecha(TransferenciaInfo transferencia) {
+        return transferencia != null ? transferencia.getFechaTransferencia() : null;
+    }
+
+    default String mapTransferenciaUnidad(TransferenciaInfo transferencia) {
+        return transferencia != null ? transferencia.getUnidadDestino() : null;
+    }
+
+    default String mapTransferenciaObservacion(TransferenciaInfo transferencia) {
+        return transferencia != null ? transferencia.getObservacion() : null;
     }
 }

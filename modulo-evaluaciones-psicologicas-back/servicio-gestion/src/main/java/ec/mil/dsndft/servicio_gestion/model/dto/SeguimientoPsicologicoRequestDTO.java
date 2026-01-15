@@ -27,8 +27,20 @@ public class SeguimientoPsicologicoRequestDTO {
     @JsonAlias({"condicion", "condicion_ficha"})
     private String condicionFicha;
 
+    @JsonAlias({"diagnostico_cie10_id"})
+    private Long diagnosticoCie10Id;
+
     @JsonAlias({"diagnostico_cie10_codigo"})
     private String diagnosticoCie10Codigo;
+
+    @JsonAlias({"diagnostico_cie10_nombre"})
+    private String diagnosticoCie10Nombre;
+
+    @JsonAlias({"diagnostico_cie10_categoria_padre"})
+    private String diagnosticoCie10CategoriaPadre;
+
+    @JsonAlias({"diagnostico_cie10_nivel"})
+    private Integer diagnosticoCie10Nivel;
 
     @JsonAlias({"diagnostico_cie10_descripcion"})
     private String diagnosticoCie10Descripcion;
@@ -41,6 +53,15 @@ public class SeguimientoPsicologicoRequestDTO {
 
     @JsonAlias({"plan_detalle"})
     private String planDetalle;
+
+    @JsonAlias({"proximo_seguimiento"})
+    private LocalDate proximoSeguimiento;
+
+    @JsonAlias({"transferencia_unidad"})
+    private String transferenciaUnidad;
+
+    @JsonAlias({"transferencia_observacion"})
+    private String transferenciaObservacion;
 
     public Long getFichaPsicologicaId() {
         return fichaPsicologicaId;
@@ -86,8 +107,24 @@ public class SeguimientoPsicologicoRequestDTO {
         return diagnosticoCie10Codigo;
     }
 
+    public String getDiagnosticoCie10Nombre() {
+        return diagnosticoCie10Nombre;
+    }
+
+    public Long getDiagnosticoCie10Id() {
+        return diagnosticoCie10Id;
+    }
+
+    public void setDiagnosticoCie10Id(Long diagnosticoCie10Id) {
+        this.diagnosticoCie10Id = diagnosticoCie10Id;
+    }
+
     public void setDiagnosticoCie10Codigo(String diagnosticoCie10Codigo) {
         this.diagnosticoCie10Codigo = diagnosticoCie10Codigo;
+    }
+
+    public void setDiagnosticoCie10Nombre(String diagnosticoCie10Nombre) {
+        this.diagnosticoCie10Nombre = diagnosticoCie10Nombre;
     }
 
     public String getDiagnosticoCie10Descripcion() {
@@ -96,6 +133,22 @@ public class SeguimientoPsicologicoRequestDTO {
 
     public void setDiagnosticoCie10Descripcion(String diagnosticoCie10Descripcion) {
         this.diagnosticoCie10Descripcion = diagnosticoCie10Descripcion;
+    }
+
+    public String getDiagnosticoCie10CategoriaPadre() {
+        return diagnosticoCie10CategoriaPadre;
+    }
+
+    public void setDiagnosticoCie10CategoriaPadre(String diagnosticoCie10CategoriaPadre) {
+        this.diagnosticoCie10CategoriaPadre = diagnosticoCie10CategoriaPadre;
+    }
+
+    public Integer getDiagnosticoCie10Nivel() {
+        return diagnosticoCie10Nivel;
+    }
+
+    public void setDiagnosticoCie10Nivel(Integer diagnosticoCie10Nivel) {
+        this.diagnosticoCie10Nivel = diagnosticoCie10Nivel;
     }
 
     public String getPlanFrecuencia() {
@@ -120,5 +173,29 @@ public class SeguimientoPsicologicoRequestDTO {
 
     public void setPlanDetalle(String planDetalle) {
         this.planDetalle = planDetalle;
+    }
+
+    public LocalDate getProximoSeguimiento() {
+        return proximoSeguimiento;
+    }
+
+    public void setProximoSeguimiento(LocalDate proximoSeguimiento) {
+        this.proximoSeguimiento = proximoSeguimiento;
+    }
+
+    public String getTransferenciaUnidad() {
+        return transferenciaUnidad;
+    }
+
+    public void setTransferenciaUnidad(String transferenciaUnidad) {
+        this.transferenciaUnidad = transferenciaUnidad;
+    }
+
+    public String getTransferenciaObservacion() {
+        return transferenciaObservacion;
+    }
+
+    public void setTransferenciaObservacion(String transferenciaObservacion) {
+        this.transferenciaObservacion = transferenciaObservacion;
     }
 }

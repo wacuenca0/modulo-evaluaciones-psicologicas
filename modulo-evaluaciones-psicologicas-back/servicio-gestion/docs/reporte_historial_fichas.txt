@@ -1,0 +1,189 @@
+================================================================================
+REPORTE: HISTORIAL DE FICHAS PSICOLÓGICAS
+================================================================================
+
+DESCRIPCIÓN:
+Este reporte muestra el historial completo de fichas psicológicas de un personal
+militar específico, incluyendo opcionalmente todos los seguimientos registrados
+en cada ficha. Es el reporte más completo para revisión clínica.
+
+URL:
+GET /gestion/api/reportes/historial-fichas
+
+MÉTODO: GET
+
+AUTENTICACIÓN: 
+Requiere token Bearer y rol ADMINISTRADOR o PSICOLOGO
+
+PARÁMETROS DE CONSULTA (Query Params):
+{
+  "personalMilitarId": 105,              // ID del personal (opcional si se envía cedula)
+  "cedula": "1234567890",                // Cédula (opcional si se envía personalMilitarId)
+  "incluirSeguimientos": false           // Boolean, default false
+}
+
+NOTAS IMPORTANTES:
+- Debe enviar personalMilitarId O cedula (al menos uno)
+- incluirSeguimientos es opcional, por defecto es false
+
+EJEMPLO DE URL COMPLETA:
+/gestion/api/reportes/historial-fichas?cedula=1234567890&incluirSeguimientos=true
+
+RESPUESTA JSON (200 OK) - SIN SEGUIMIENTOS:
+[
+  {
+    "origen": "ficha_activa",
+    "personalMilitarId": 105,
+    "personalMilitarCedula": "1234567890",
+    "personalMilitarNombre": "Sargento Carlos Mendoza",
+    "fichaId": 234,
+    "fichaHistoricaId": null,
+    "numeroFicha": "EV-2026-00234",
+    "fechaEvaluacion": "2026-01-15",
+    "condicionClinica": "Seguimiento",
+    "estadoFicha": "Activa",
+    "diagnosticoCodigo": "F32.0",
+    "diagnosticoNombre": "Episodio depresivo leve",
+    "diagnosticoCategoriaPadre": "F30-F39",
+    "diagnosticoNivel": 3,
+    "diagnosticoDescripcion": "Trastornos del estado de ánimo (afectivos)",
+    "psicologoId": 1,
+    "psicologoNombre": "Dr. Juan Pérez",
+    "psicologoUnidadMilitar": "Hospital Militar Central",
+    "seguimientosCantidad": 3,
+    "tieneSeguimientos": true,
+    "seguimientos": [],
+    "filtroPersonalMilitarId": 105,
+    "filtroCedula": "1234567890",
+    "filtroIncluirSeguimientos": false
+  },
+  {
+    "origen": "ficha_historica",
+    "personalMilitarId": 105,
+    "personalMilitarCedula": "1234567890",
+    "personalMilitarNombre": "Sargento Carlos Mendoza",
+    "fichaId": null,
+    "fichaHistoricaId": 120,
+    "numeroFicha": "EV-2025-00180",
+    "fechaEvaluacion": "2025-11-10",
+    "condicionClinica": "Alta",
+    "estadoFicha": "Cerrada",
+    "diagnosticoCodigo": null,
+    "diagnosticoNombre": null,
+    "diagnosticoCategoriaPadre": null,
+    "diagnosticoNivel": null,
+    "diagnosticoDescripcion": null,
+    "psicologoId": 2,
+    "psicologoNombre": "Dra. María López",
+    "psicologoUnidadMilitar": "Hospital Militar Central",
+    "seguimientosCantidad": 0,
+    "tieneSeguimientos": false,
+    "seguimientos": [],
+    "filtroPersonalMilitarId": 105,
+    "filtroCedula": "1234567890",
+    "filtroIncluirSeguimientos": false
+  }
+]
+
+RESPUESTA JSON (200 OK) - CON SEGUIMIENTOS:
+[
+  {
+    "origen": "ficha_activa",
+    "personalMilitarId": 105,
+    "personalMilitarCedula": "1234567890",
+    "personalMilitarNombre": "Sargento Carlos Mendoza",
+    "fichaId": 234,
+    "fichaHistoricaId": null,
+    "numeroFicha": "EV-2026-00234",
+    "fechaEvaluacion": "2026-01-15",
+    "condicionClinica": "Seguimiento",
+    "estadoFicha": "Activa",
+    "diagnosticoCodigo": "F32.0",
+    "diagnosticoNombre": "Episodio depresivo leve",
+    "diagnosticoCategoriaPadre": "F30-F39",
+    "diagnosticoNivel": 3,
+    "diagnosticoDescripcion": "Trastornos del estado de ánimo (afectivos)",
+    "psicologoId": 1,
+    "psicologoNombre": "Dr. Juan Pérez",
+    "psicologoUnidadMilitar": "Hospital Militar Central",
+    "seguimientosCantidad": 3,
+    "tieneSeguimientos": true,
+    "seguimientos": [
+      {
+        "id": 50,
+        "fichaPsicologicaId": 234,
+        "psicologoId": 1,
+        "psicologoNombre": "Dr. Juan Pérez",
+        "fechaSeguimiento": "2026-01-25",
+        "resumen": "Paciente muestra mejoría en sintomatología depresiva",
+        "observaciones": "Continuar con terapia cognitivo-conductual",
+        "proximaCita": "2026-02-25"
+      },
+      {
+        "id": 45,
+        "fichaPsicologicaId": 234,
+        "psicologoId": 1,
+        "psicologoNombre": "Dr. Juan Pérez",
+        "fechaSeguimiento": "2026-01-20",
+        "resumen": "Primera sesión de seguimiento",
+        "observaciones": "Adherencia al tratamiento satisfactoria",
+        "proximaCita": "2026-01-25"
+      }
+    ],
+    "filtroPersonalMilitarId": 105,
+    "filtroCedula": "1234567890",
+    "filtroIncluirSeguimientos": true
+  }
+]
+
+CAMPOS DE LA RESPUESTA:
+- origen: Indica si es "ficha_activa" o "ficha_historica"
+- personalMilitarId: ID del personal militar
+- personalMilitarCedula: Cédula de identidad
+- personalMilitarNombre: Nombre completo del personal
+- fichaId: ID de la ficha (solo para fichas activas, null en históricas)
+- fichaHistoricaId: ID histórico (solo para fichas cerradas, null en activas)
+- numeroFicha: Número único de evaluación
+- fechaEvaluacion: Fecha de la evaluación
+- condicionClinica: Condición final (Alta, Seguimiento, Transferencia)
+- estadoFicha: Estado administrativo de la ficha
+- diagnosticoCodigo: Código CIE-10 (null si es Alta)
+- diagnosticoNombre: Nombre del diagnóstico
+- diagnosticoCategoriaPadre: Categoría padre CIE-10
+- diagnosticoNivel: Nivel en jerarquía CIE-10
+- diagnosticoDescripcion: Descripción del diagnóstico
+- psicologoId: ID del psicólogo responsable
+- psicologoNombre: Nombre del psicólogo
+- psicologoUnidadMilitar: Unidad del psicólogo
+- seguimientosCantidad: Cantidad total de seguimientos
+- tieneSeguimientos: Boolean indicando si hay seguimientos
+- seguimientos: Array de seguimientos (vacío si incluirSeguimientos=false)
+- filtro*: Campos que reflejan los filtros aplicados
+
+ESTRUCTURA DE SEGUIMIENTOS:
+Cada objeto en el array "seguimientos" contiene:
+- id: ID del seguimiento
+- fichaPsicologicaId: ID de la ficha a la que pertenece
+- psicologoId: ID del psicólogo que realizó el seguimiento
+- psicologoNombre: Nombre del psicólogo
+- fechaSeguimiento: Fecha del seguimiento
+- resumen: Resumen de la sesión
+- observaciones: Observaciones clínicas
+- proximaCita: Fecha programada para próxima cita
+
+CASOS DE USO:
+1. Revisar historial clínico completo de un paciente
+2. Auditoría de atenciones recibidas por un personal
+3. Análisis de evolución de condiciones clínicas
+4. Verificar adherencia a seguimientos programados
+5. Preparación para nuevas evaluaciones (revisión de antecedentes)
+6. Generación de informes clínicos completos
+7. Seguimiento longitudinal de tratamientos
+
+NOTAS:
+- Combina fichas activas y fichas históricas (cerradas)
+- El parámetro incluirSeguimientos=true puede generar respuestas grandes
+- Los seguimientos se ordenan por fecha (más reciente primero)
+- Las fichas se ordenan por fecha de evaluación (más reciente primero)
+- Solo retorna fichas del personal especificado
+- Requiere al menos personalMilitarId o cedula

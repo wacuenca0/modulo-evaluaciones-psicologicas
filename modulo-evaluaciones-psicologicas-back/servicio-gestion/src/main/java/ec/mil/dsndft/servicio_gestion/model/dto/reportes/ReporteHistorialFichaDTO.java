@@ -1,40 +1,37 @@
 package ec.mil.dsndft.servicio_gestion.model.dto.reportes;
 
-import ec.mil.dsndft.servicio_gestion.model.dto.ObservacionClinicaSectionDTO;
-import ec.mil.dsndft.servicio_gestion.model.dto.PsicoanamnesisInfanciaDTO;
-import ec.mil.dsndft.servicio_gestion.model.dto.PsicoanamnesisNatalDTO;
-import ec.mil.dsndft.servicio_gestion.model.dto.PsicoanamnesisPrenatalDTO;
 import ec.mil.dsndft.servicio_gestion.model.dto.SeguimientoPsicologicoDTO;
-import lombok.AllArgsConstructor;
+import java.time.LocalDate;
+import java.util.Collections;
+import java.util.List;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
-import java.time.LocalDate;
-import java.time.LocalDateTime;
-import java.util.ArrayList;
-import java.util.List;
-
 @Data
 @NoArgsConstructor
-@AllArgsConstructor
 public class ReporteHistorialFichaDTO {
+    private String origen;
+    private Long personalMilitarId;
+    private String personalMilitarCedula;
+    private String personalMilitarNombre;
     private Long fichaId;
+    private Long fichaHistoricaId;
+    private String numeroFicha;
     private LocalDate fechaEvaluacion;
-    private String estado;
-    private String tipoEvaluacion;
+    private String condicionClinica;
+    private String estadoFicha;
+    private String diagnosticoCodigo;
+    private String diagnosticoNombre;
+    private String diagnosticoCategoriaPadre;
+    private Integer diagnosticoNivel;
+    private String diagnosticoDescripcion;
     private Long psicologoId;
     private String psicologoNombre;
-    private String condicion;
-    private String diagnosticoCodigo;
-    private String diagnosticoDescripcion;
-    private String planFrecuencia;
-    private String planTipoSesion;
-    private String planDetalle;
-    private ObservacionClinicaSectionDTO seccionObservacion;
-    private PsicoanamnesisPrenatalDTO seccionPrenatal;
-    private PsicoanamnesisNatalDTO seccionNatal;
-    private PsicoanamnesisInfanciaDTO seccionInfancia;
-    private LocalDateTime creadaEn;
-    private LocalDateTime actualizadaEn;
-    private List<SeguimientoPsicologicoDTO> seguimientos = new ArrayList<>();
+    private String psicologoUnidadMilitar;
+    private Long seguimientosCantidad;
+    private boolean tieneSeguimientos;
+    private List<SeguimientoPsicologicoDTO> seguimientos = Collections.emptyList();
+    private Long filtroPersonalMilitarId;
+    private String filtroCedula;
+    private boolean filtroIncluirSeguimientos;
 }

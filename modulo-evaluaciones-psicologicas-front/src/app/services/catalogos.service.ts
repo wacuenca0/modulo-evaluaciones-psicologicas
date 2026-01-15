@@ -1,6 +1,6 @@
 import { inject, Injectable } from '@angular/core';
 import { HttpClient, HttpParams } from '@angular/common/http';
-import { Observable } from 'rxjs';
+import { Observable, map } from 'rxjs';
 import { buildApiUrl } from '../core/config/api.config';
 import { CatalogoCIE10DTO, CreateCatalogoCIE10Payload, UpdateCatalogoCIE10Payload } from '../models/catalogo.models';
 
@@ -13,19 +13,23 @@ export interface CatalogoCie10Filters {
 @Injectable({ providedIn: 'root' })
 export class CatalogosService {
   private readonly http = inject(HttpClient);
-  private readonly baseUrl = buildApiUrl('catalogos', '/catalogo-cie10');
+  private readonly cie10BaseUrl = buildApiUrl('gestion', '/catalogos/cie10');
 
   listarCIE10(filters: CatalogoCie10Filters = {}): Observable<CatalogoCIE10DTO[]> {
     let params = new HttpParams();
     if (filters.soloActivos !== undefined) {
-      params = params.set('soloActivos', String(Boolean(filters.soloActivos)));
+      const flag = String(Boolean(filters.soloActivos));
+      params = params.set('soloActivos', flag).set('activo', flag);
     }
     const search = filters.termino ?? filters.search;
     if (search && search.trim().length) {
       const normalized = search.trim();
-      params = params.set('termino', normalized).set('search', normalized);
+      params = params.set('q', normalized);
     }
-    return this.http.get<CatalogoCIE10DTO[]>(this.baseUrl, { params });
+    params = params.set('limit', '200').set('pageSize', '200');
+    return this.http.get<CatalogoCIE10DTO[]>(this.cie10BaseUrl, { params }).pipe(
+      map(listado => Array.isArray(listado) ? listado : [])
+    );
   }
 
   buscarCIE10(termino: string): Observable<CatalogoCIE10DTO[]> {
@@ -34,15 +38,104 @@ export class CatalogosService {
   }
 
   obtenerCIE10(id: number): Observable<CatalogoCIE10DTO> {
-    return this.http.get<CatalogoCIE10DTO>(`${this.baseUrl}/${id}`);
+    return this.http.get<CatalogoCIE10DTO>(`${this.cie10BaseUrl}/${id}`);
   }
 
   crearCIE10(payload: CreateCatalogoCIE10Payload): Observable<CatalogoCIE10DTO> {
-    return this.http.post<CatalogoCIE10DTO>(this.baseUrl, payload);
+    const body = this.toCreatePayload(payload);
+    return this.http.post<CatalogoCIE10DTO>(this.cie10BaseUrl, body);
   }
 
   actualizarCIE10(id: number, payload: UpdateCatalogoCIE10Payload): Observable<CatalogoCIE10DTO> {
-    return this.http.put<CatalogoCIE10DTO>(`${this.baseUrl}/${id}`, payload);
+    const body = this.toUpdatePayload(payload);
+    return this.http.put<CatalogoCIE10DTO>(`${this.cie10BaseUrl}/${id}`, body);
+  }
+
+  private toCreatePayload(payload: CreateCatalogoCIE10Payload): Record<string, unknown> {
+    const codigo = this.normalizeCodigo(payload.codigo);
+    const nombre = this.normalizeTextoRequerido(payload.nombre);
+    const descripcion = this.normalizeTextoRequerido(payload.descripcion);
+    const categoria = this.normalizeTextoOpcional(payload.categoriaPadre ?? undefined);
+    const nivel = this.normalizeNivel(payload.nivel, true);
+    const activo = payload.activo ?? true;
+
+    const body: Record<string, unknown> = {
+      codigo,
+      nombre,
+      descripcion,
+      nivel,
+      activo: Boolean(activo)
+    };
+
+    if (categoria !== undefined) {
+      body['categoria_padre'] = categoria;
+    }
+
+    return body;
+  }
+
+  private toUpdatePayload(payload: UpdateCatalogoCIE10Payload): Record<string, unknown> {
+    const body: Record<string, unknown> = {};
+
+    if (payload.codigo !== undefined) {
+      body['codigo'] = this.normalizeCodigo(payload.codigo);
+    }
+    if (payload.nombre !== undefined) {
+      body['nombre'] = this.normalizeTextoRequerido(payload.nombre);
+    }
+    if (payload.descripcion !== undefined) {
+      body['descripcion'] = this.normalizeTextoRequerido(payload.descripcion);
+    }
+    if (payload.categoriaPadre !== undefined) {
+      body['categoria_padre'] = this.normalizeTextoOpcional(payload.categoriaPadre);
+    }
+    if (payload.nivel !== undefined) {
+      body['nivel'] = this.normalizeNivel(payload.nivel, true);
+    }
+    if (payload.activo !== undefined) {
+      body['activo'] = Boolean(payload.activo);
+    }
+
+    return body;
+  }
+
+  private normalizeCodigo(value: string): string {
+    const normalized = this.normalizeTextoRequerido(value).toUpperCase();
+    return normalized;
+  }
+
+  private normalizeTextoRequerido(value: string): string {
+    const normalized = (value ?? '').toString().replace(/\s+/g, ' ').trim();
+    if (!normalized.length) {
+      throw new Error('Los campos requeridos para el catalogo CIE-10 no fueron proporcionados.');
+    }
+    return normalized;
+  }
+
+  private normalizeTextoOpcional(value: string | null | undefined): string | null | undefined {
+    if (value === undefined) {
+      return undefined;
+    }
+    if (value === null) {
+      return null;
+    }
+    const normalized = value.toString().replace(/\s+/g, ' ').trim();
+    return normalized.length ? normalized : null;
+  }
+
+  private normalizeNivel(value: number | string | null | undefined, required: boolean): number {
+    if (value === null || value === undefined) {
+      if (required) {
+        return 0;
+      }
+      return 0;
+    }
+    const numeric = typeof value === 'number' ? value : Number(value);
+    if (!Number.isFinite(numeric)) {
+      return 0;
+    }
+    const entero = Math.trunc(numeric);
+    return entero < 0 ? 0 : entero;
   }
 
 }

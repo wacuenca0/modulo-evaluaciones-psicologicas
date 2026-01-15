@@ -87,8 +87,21 @@ type AgendaItem = { titulo: string; detalle: string };
                     <li>
                       <button type="button" (click)="seleccionarDiagnostico(item)"
                         class="flex w-full flex-col gap-1 rounded-xl border border-slate-200 px-4 py-3 text-left text-sm transition hover:border-slate-400">
-                        <span class="font-semibold text-slate-900">{{ item.codigo }}</span>
-                        <span class="text-slate-600">{{ item.descripcion }}</span>
+                        <div class="flex flex-wrap items-center justify-between gap-2">
+                          <span class="text-sm font-semibold text-slate-900">{{ item.codigo }}</span>
+                          @if (item?.nivel !== null && item?.nivel !== undefined) {
+                            <span class="text-xs text-slate-500">Nivel {{ item?.nivel }}</span>
+                          }
+                        </div>
+                        @if (item?.nombre) {
+                          <p class="text-sm text-slate-700">{{ item?.nombre }}</p>
+                        }
+                        @if (item?.descripcion) {
+                          <p class="text-xs text-slate-600">{{ item?.descripcion }}</p>
+                        }
+                        @if (item?.categoriaPadre) {
+                          <p class="text-[11px] text-slate-500">Categoria: {{ item?.categoriaPadre }}</p>
+                        }
                       </button>
                     </li>
                   }
@@ -104,7 +117,17 @@ type AgendaItem = { titulo: string; detalle: string };
                 <div>
                   <p class="text-xs font-semibold uppercase tracking-wide text-slate-500">Diagnostico seleccionado</p>
                   <p class="text-sm font-semibold text-slate-900">{{ seleccionado?.codigo }}</p>
-                  <p class="text-xs text-slate-600">{{ seleccionado?.descripcion }}</p>
+                  @if (seleccionado?.nombre) {
+                    <p class="text-sm text-slate-700">{{ seleccionado?.nombre }}</p>
+                  }
+                  @if (seleccionado?.descripcion) {
+                    <p class="text-xs text-slate-600">{{ seleccionado?.descripcion }}</p>
+                  }
+                  <div class="mt-1 flex flex-wrap gap-2 text-[11px] text-slate-500">
+                    @if (seleccionado?.nivel !== null && seleccionado?.nivel !== undefined) {
+                      <span>Nivel {{ seleccionado?.nivel }}</span>
+                    }
+                  </div>
                 </div>
                 <button type="button" (click)="limpiarDiagnosticoSeleccionado()" class="text-xs font-semibold text-slate-600 hover:text-slate-900 transition">
                   Cambiar
@@ -112,7 +135,7 @@ type AgendaItem = { titulo: string; detalle: string };
               </article>
             }
 
-            @if (hasError('cie10Codigo')) {
+            @if (hasError('cie10Codigo') || hasError('cie10Nombre') || hasError('cie10Descripcion') || hasError('cie10Nivel')) {
               <p class="text-xs text-red-600">Selecciona un diagnostico del catalogo CIE-10.</p>
             }
           </section>
@@ -172,7 +195,10 @@ export class FichaCondicionFinalComponent {
   readonly form = this.fb.group({
     condicion: ['ALTA', Validators.required],
     cie10Codigo: ['', []],
-    cie10Descripcion: ['', []]
+    cie10Nombre: ['', []],
+    cie10Descripcion: ['', []],
+    cie10CategoriaPadre: ['', []],
+    cie10Nivel: ['', []]
   });
 
   private readonly condicionSeleccionada = signal<FichaCondicionFinal>('ALTA');
@@ -234,7 +260,7 @@ export class FichaCondicionFinalComponent {
     });
   }
 
-  hasError(controlName: 'condicion' | 'cie10Codigo' | 'cie10Descripcion'): boolean {
+  hasError(controlName: 'condicion' | 'cie10Codigo' | 'cie10Nombre' | 'cie10Descripcion' | 'cie10Nivel'): boolean {
     const control = this.form.controls[controlName];
     if (!control) {
       return false;
@@ -342,26 +368,44 @@ export class FichaCondicionFinalComponent {
     this.form.patchValue(
       {
         cie10Codigo: item.codigo ?? '',
-        cie10Descripcion: item.descripcion ?? ''
+        cie10Nombre: item.nombre ?? '',
+        cie10Descripcion: item.descripcion ?? '',
+        cie10CategoriaPadre: item.categoriaPadre ?? '',
+        cie10Nivel: item.nivel != null ? String(item.nivel) : ''
       },
       { emitEvent: false }
     );
     this.form.controls.cie10Codigo.markAsDirty();
+    this.form.controls.cie10Nombre.markAsDirty();
     this.form.controls.cie10Descripcion.markAsDirty();
+    this.form.controls.cie10CategoriaPadre.markAsDirty();
+    this.form.controls.cie10Nivel.markAsDirty();
     this.form.controls.cie10Codigo.markAsTouched();
+    this.form.controls.cie10Nombre.markAsTouched();
     this.form.controls.cie10Descripcion.markAsTouched();
+    this.form.controls.cie10CategoriaPadre.markAsTouched();
+    this.form.controls.cie10Nivel.markAsTouched();
     this.form.controls.cie10Codigo.updateValueAndValidity({ emitEvent: false });
+    this.form.controls.cie10Nombre.updateValueAndValidity({ emitEvent: false });
     this.form.controls.cie10Descripcion.updateValueAndValidity({ emitEvent: false });
+    this.form.controls.cie10CategoriaPadre.updateValueAndValidity({ emitEvent: false });
+    this.form.controls.cie10Nivel.updateValueAndValidity({ emitEvent: false });
     this.cie10Loading.set(false);
     this.cie10Resultados.set([]);
-    this.cie10Query.set(`${item.codigo} - ${item.descripcion}`.trim());
+    this.cie10Query.set(this.formatDiagnosticoResumen(item));
   }
 
   limpiarDiagnosticoSeleccionado() {
     this.diagnosticoSeleccionado.set(null);
-    this.form.patchValue({ cie10Codigo: '', cie10Descripcion: '' }, { emitEvent: false });
+    this.form.patchValue(
+      { cie10Codigo: '', cie10Nombre: '', cie10Descripcion: '', cie10CategoriaPadre: '', cie10Nivel: '' },
+      { emitEvent: false }
+    );
     this.form.controls.cie10Codigo.updateValueAndValidity({ emitEvent: false });
+    this.form.controls.cie10Nombre.updateValueAndValidity({ emitEvent: false });
     this.form.controls.cie10Descripcion.updateValueAndValidity({ emitEvent: false });
+    this.form.controls.cie10CategoriaPadre.updateValueAndValidity({ emitEvent: false });
+    this.form.controls.cie10Nivel.updateValueAndValidity({ emitEvent: false });
     if (this.requiereDiagnostico()) {
       this.cie10Query.set('');
       if (this.cie10CatalogoLoaded()) {
@@ -421,24 +465,40 @@ export class FichaCondicionFinalComponent {
 
   private applyConditionalValidators(value: FichaCondicionFinal | '') {
     const codigoControl = this.form.controls.cie10Codigo;
+    const nombreControl = this.form.controls.cie10Nombre;
     const descripcionControl = this.form.controls.cie10Descripcion;
+    const categoriaControl = this.form.controls.cie10CategoriaPadre;
+    const nivelControl = this.form.controls.cie10Nivel;
     const requiereDiagnostico = value === 'SEGUIMIENTO' || value === 'TRANSFERENCIA';
 
     if (requiereDiagnostico) {
       codigoControl.setValidators([Validators.required]);
+      nombreControl.setValidators([Validators.required]);
       descripcionControl.setValidators([Validators.required]);
+      nivelControl.setValidators([Validators.required]);
+      nombreControl.enable({ emitEvent: false });
+      categoriaControl.enable({ emitEvent: false });
+      nivelControl.enable({ emitEvent: false });
       this.ensureCatalogoCargado();
     } else {
       codigoControl.clearValidators();
+      nombreControl.clearValidators();
       descripcionControl.clearValidators();
+      nivelControl.clearValidators();
       this.limpiarDiagnosticoSeleccionado();
       this.cie10Query.set('');
       this.cie10Resultados.set([]);
       this.cie10Error.set(null);
+      nombreControl.disable({ emitEvent: false });
+      categoriaControl.disable({ emitEvent: false });
+      nivelControl.disable({ emitEvent: false });
     }
 
     codigoControl.updateValueAndValidity({ emitEvent: false });
+    nombreControl.updateValueAndValidity({ emitEvent: false });
     descripcionControl.updateValueAndValidity({ emitEvent: false });
+    categoriaControl.updateValueAndValidity({ emitEvent: false });
+    nivelControl.updateValueAndValidity({ emitEvent: false });
   }
 
   private filtrarCatalogoLocal(queryRaw: string): readonly CatalogoCIE10DTO[] {
@@ -446,35 +506,152 @@ export class FichaCondicionFinalComponent {
     if (!catalogo.length) {
       return [];
     }
+    const ordenado = [...catalogo].sort((a, b) => {
+      const codigoA = a.codigo?.toUpperCase() ?? '';
+      const codigoB = b.codigo?.toUpperCase() ?? '';
+      return codigoA.localeCompare(codigoB, undefined, { numeric: true, sensitivity: 'base' });
+    });
     const query = queryRaw?.trim().toLowerCase() ?? '';
     if (!query.length) {
-      return catalogo;
+      return ordenado.slice(0, 200);
     }
-    return catalogo.filter((item) => {
-      const codigo = item.codigo?.toLowerCase() ?? '';
-      const descripcion = item.descripcion?.toLowerCase() ?? '';
-      return codigo.includes(query) || descripcion.includes(query);
-    });
+    return ordenado
+      .filter((item) => {
+        const codigo = item.codigo?.toLowerCase() ?? '';
+        const descripcion = item.descripcion?.toLowerCase() ?? '';
+        const nombre = item.nombre?.toLowerCase() ?? '';
+        const categoria = item.categoriaPadre?.toLowerCase() ?? '';
+        return codigo.includes(query) || descripcion.includes(query) || nombre.includes(query) || categoria.includes(query);
+      })
+      .slice(0, 200);
   }
 
   private buildPayload(condicion: FichaCondicionFinal): FichaCondicionFinalPayload | null {
     if (condicion === 'ALTA') {
-      return { condicion };
+      return {
+        condicion,
+        diagnosticoCie10Id: null,
+        diagnosticoCie10Codigo: null,
+        diagnosticoCie10Nombre: null,
+        diagnosticoCie10Descripcion: null,
+        diagnosticoCie10CategoriaPadre: null,
+        diagnosticoCie10Nivel: null,
+        planFrecuencia: null,
+        planTipoSesion: null,
+        planDetalle: null,
+        proximoSeguimiento: null,
+        transferenciaUnidad: null,
+        transferenciaObservacion: null
+      };
     }
 
-    const codigo = (this.form.controls.cie10Codigo.value ?? '').trim();
-    const descripcion = (this.form.controls.cie10Descripcion.value ?? '').trim();
+    const codigo = this.cleanRequiredText(this.form.controls.cie10Codigo.value);
+    const nombre = this.cleanRequiredText(this.form.controls.cie10Nombre.value);
+    const descripcion = this.cleanOptionalText(this.form.controls.cie10Descripcion.value);
+    const categoriaPadre = this.cleanOptionalText(this.form.controls.cie10CategoriaPadre.value);
+    const nivelValor = this.normalizeDiagnosticoNivel(this.form.controls.cie10Nivel.value);
 
-    if (!codigo || !descripcion) {
+    if (!codigo || !nombre || !descripcion) {
       this.error.set('Selecciona un diagnostico CIE-10 valido.');
+      return null;
+    }
+    if (nivelValor === undefined || nivelValor === null) {
+      this.error.set('No se pudo determinar el nivel del diagnostico. Vuelve a seleccionarlo.');
+      return null;
+    }
+
+    const diagnostico = this.diagnosticoSeleccionado();
+    const diagnosticoId = this.parseNumeric((diagnostico as { id?: unknown })?.id);
+    if (diagnosticoId === null) {
+      this.error.set('Selecciona un diagnostico del catalogo CIE-10 antes de continuar.');
       return null;
     }
 
     return {
       condicion,
-      cie10Codigo: codigo,
-      cie10Descripcion: descripcion
+      diagnosticoCie10Id: diagnosticoId,
+      diagnosticoCie10Codigo: codigo,
+      diagnosticoCie10Nombre: nombre,
+      diagnosticoCie10Descripcion: descripcion,
+      diagnosticoCie10CategoriaPadre: categoriaPadre,
+      diagnosticoCie10Nivel: nivelValor,
+      planFrecuencia: null,
+      planTipoSesion: null,
+      planDetalle: null,
+      proximoSeguimiento: null,
+      transferenciaUnidad: null,
+      transferenciaObservacion: null
     };
+  }
+
+  private cleanRequiredText(value: unknown): string | null {
+    if (typeof value !== 'string') {
+      return null;
+    }
+    const trimmed = value.trim();
+    return trimmed.length ? trimmed : null;
+  }
+
+  private cleanOptionalText(value: unknown): string | null {
+    if (typeof value !== 'string') {
+      return null;
+    }
+    const trimmed = value.trim();
+    return trimmed.length ? trimmed : null;
+  }
+
+  private normalizeDiagnosticoNivel(value: unknown): number | null | undefined {
+    if (value === undefined) {
+      return undefined;
+    }
+    if (value === null) {
+      return null;
+    }
+    if (typeof value === 'number' && Number.isFinite(value)) {
+      const entero = Math.trunc(value);
+      return entero < 0 ? 0 : entero;
+    }
+    if (typeof value === 'string') {
+      const trimmed = value.trim();
+      if (!trimmed.length) {
+        return null;
+      }
+      const parsed = Number(trimmed);
+      if (!Number.isFinite(parsed)) {
+        return undefined;
+      }
+      const entero = Math.trunc(parsed);
+      return entero < 0 ? 0 : entero;
+    }
+    return undefined;
+  }
+
+  private formatDiagnosticoResumen(item: CatalogoCIE10DTO | null): string {
+    if (!item) {
+      return '';
+    }
+    const partes: string[] = [];
+    const codigo = typeof item.codigo === 'string' ? item.codigo.trim() : '';
+    const nombre = typeof item.nombre === 'string' ? item.nombre.trim() : '';
+    const descripcion = typeof item.descripcion === 'string' ? item.descripcion.trim() : '';
+    const categoria = typeof item.categoriaPadre === 'string' ? item.categoriaPadre.trim() : '';
+    const nivel = typeof item.nivel === 'number' && Number.isFinite(item.nivel) ? item.nivel : null;
+    if (codigo) {
+      partes.push(codigo);
+    }
+    if (nombre) {
+      partes.push(nombre);
+    }
+    if (descripcion) {
+      partes.push(descripcion);
+    }
+    if (categoria) {
+      partes.push(`Categoria ${categoria}`);
+    }
+    if (nivel !== null) {
+      partes.push(`Nivel ${nivel}`);
+    }
+    return partes.join(' · ');
   }
 
   private buildConfirmacion(condicion: FichaCondicionFinal): string {
